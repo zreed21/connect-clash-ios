@@ -50,6 +50,44 @@ workflows:
             exit 1
           fi
           echo "ASC API env present (values not printed)."
+      - name: Ensure ASC display name is "Pairstorm" (best effort)
+        script: |
+          node - <<'NODE' || echo "ASC name fix skipped (non-fatal)"
+          const crypto = require('crypto');
+          const iss = process.env.APP_STORE_CONNECT_ISSUER_ID;
+          const kid = process.env.APP_STORE_CONNECT_KEY_IDENTIFIER;
+          const key = process.env.APP_STORE_CONNECT_PRIVATE_KEY;
+          const appId = process.env.APP_STORE_APPLE_ID || '6814711059';
+          if (!iss || !kid || !key) { console.log('no ASC creds, skip'); process.exit(0); }
+          const b64u = b => Buffer.from(b).toString('base64url');
+          const iat = Math.floor(Date.now() / 1000);
+          const header = b64u(JSON.stringify({alg: 'ES256', kid, typ: 'JWT'}));
+          const payload = b64u(JSON.stringify({iss, iat, exp: iat + 1000,
+            aud: 'appstoreconnect-v1', bid: 'com.connectclash.app'}));
+          const data = header + '.' + payload;
+          const sig = crypto.sign(null, Buffer.from(data),
+            {key, dsaEncoding: 'ieee-p1363'}).toString('base64url');
+          const H = {Authorization: 'Bearer ' + data + '.' + sig,
+            'Content-Type': 'application/json'};
+          const API = 'https://api.appstoreconnect.apple.com/v1';
+          (async () => {
+            const infos = await (await fetch(`${API}/apps/${appId}/appInfos`, {headers: H})).json();
+            for (const info of (infos.data || [])) {
+              const locs = await (await fetch(`${API}/appInfos/${info.id}/appInfoLocalizations`, {headers: H})).json();
+              for (const loc of (locs.data || [])) {
+                if (loc.attributes.locale === 'en-US' && loc.attributes.name !== 'Pairstorm') {
+                  const r = await fetch(`${API}/appInfoLocalizations/${loc.id}`, {
+                    method: 'PATCH', headers: H,
+                    body: JSON.stringify({data: {id: loc.id, type: 'appInfoLocalizations',
+                      attributes: {name: 'Pairstorm'}}})});
+                  console.log('ASC name ->', 'Pairstorm', 'status', r.status);
+                } else if (loc.attributes.locale === 'en-US') {
+                  console.log('ASC name already Pairstorm');
+                }
+              }
+            }
+          })().catch(e => { console.log('name fix error (non-fatal):', e.message); });
+          NODE
       - name: Install npm dependencies
         script: |
           npm ci || npm install
