@@ -1,5 +1,5 @@
 /**
- * Connect Clash — Nearby discovery bridge (Capacitor / iOS)
+ * Pairstorm — Nearby discovery bridge (Capacitor / iOS)
  *
  * Strategy (bandwidth honesty):
  *   Classic BLE cannot sustain twitch arena sync. This bridge only helps
