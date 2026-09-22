@@ -1,0 +1,10 @@
+node_modules/
+.DS_Store
+*.log
+dist/
+.idea/
+.vscode/
+ios/App/Pods/
+ios/App/Podfile.lock
+ios/DerivedData/
+*.xcuserdata

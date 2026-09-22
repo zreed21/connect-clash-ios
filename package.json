@@ -1,0 +1,31 @@
+{
+  "name": "connect-clash-ios",
+  "version": "1.0.0",
+  "description": "Connect Clash \u2014 Capacitor iOS / TestFlight wrap (itch WebRTC + Nearby BLE discovery)",
+  "main": "index.js",
+  "scripts": {
+    "build:web": "echo \"Static www/ assets \u2014 no bundler step\"",
+    "sync": "npx cap sync ios",
+    "open:ios": "npx cap open ios",
+    "cap:sync": "npx cap sync ios"
+  },
+  "keywords": [],
+  "author": "SeenLow",
+  "license": "ISC",
+  "dependencies": {
+    "@capacitor-community/bluetooth-le": "^7.3.2",
+    "@capacitor/app": "^7.1.2",
+    "@capacitor/cli": "^7.6.9",
+    "@capacitor/core": "^7.6.9",
+    "@capacitor/ios": "^7.6.9",
+    "@capacitor/splash-screen": "^7.0.5",
+    "@capacitor/status-bar": "^7.0.6"
+  },
+  "private": true,
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=18 <=22"
+  }
+}

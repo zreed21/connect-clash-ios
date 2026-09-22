@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#0a0614" />
+  <title>Connect Clash</title>
+  <style>
+    :root {
+      --ink: #0a0614; --cream: #f7f2ff; --amber: #fbbf24; --sky: #38bdf8; --violet: #a78bfa;
+      --safe-t: env(safe-area-inset-top, 0px);
+      --safe-b: env(safe-area-inset-bottom, 0px);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; background: var(--ink); color: #fff;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent; user-select: none; }
+    .wrap {
+      min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: calc(24px + var(--safe-t)) 24px calc(24px + var(--safe-b));
+      background: radial-gradient(120% 90% at 50% 0%, #1d1136 0%, #0a0614 55%, #05030b 100%);
+    }
+    h1 { font-family: "Arial Black", Impact, system-ui, sans-serif; font-size: clamp(1.8rem, 7vw, 2.6rem);
+      letter-spacing: .04em; margin-bottom: .35rem; text-align: center; }
+    .sub { color: rgba(247,242,255,.7); text-align: center; max-width: 28rem; line-height: 1.45; margin-bottom: 1.75rem; font-size: .95rem; }
+    .stack { display: flex; flex-direction: column; gap: .75rem; width: min(100%, 22rem); }
+    button {
+      appearance: none; border: 0; border-radius: 14px; padding: 1rem 1.1rem; font-weight: 700;
+      font-size: 1rem; cursor: pointer; color: #1a1000; background: var(--amber);
+    }
+    button.secondary { background: rgba(255,255,255,.08); color: var(--cream); border: 1px solid rgba(255,255,255,.14); }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    .hint { margin-top: 1.25rem; font-size: .8rem; color: rgba(247,242,255,.55); text-align: center; max-width: 26rem; line-height: 1.4; }
+    .status { min-height: 1.25rem; margin-top: .75rem; font-size: .85rem; color: var(--sky); text-align: center; }
+    .panel { display: none; margin-top: 1rem; width: min(100%, 22rem); padding: 1rem; border-radius: 14px;
+      background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); }
+    .panel.show { display: block; }
+    .code { font-family: ui-monospace, Menlo, monospace; font-size: 2rem; letter-spacing: .35em; text-align: center;
+      color: var(--amber); margin: .5rem 0 1rem; }
+    input {
+      width: 100%; padding: .85rem; border-radius: 12px; border: 1px solid rgba(255,255,255,.18);
+      background: rgba(0,0,0,.35); color: #fff; font-size: 1.1rem; letter-spacing: .2em; text-align: center;
+      text-transform: uppercase; margin-bottom: .75rem;
+    }
+    .badge { display: inline-block; font-size: .7rem; letter-spacing: .08em; text-transform: uppercase;
+      padding: .2rem .5rem; border-radius: 999px; background: rgba(167,139,250,.2); color: var(--violet); margin-bottom: .75rem; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="badge" id="envBadge">WEB</div>
+    <h1>CONNECT CLASH</h1>
+    <p class="sub">Same itch.io duel — PeerJS WebRTC online. Nearby on iOS uses BLE scan + code handoff (gameplay stays on WebRTC; BLE is not the game transport).</p>
+    <div class="stack">
+      <button type="button" id="btnPlay">Play (Online / Local)</button>
+      <button type="button" class="secondary" id="btnNearby" disabled>Nearby Duel (Bluetooth)</button>
+    </div>
+    <div class="status" id="status"></div>
+
+    <div class="panel" id="nearbyPanel">
+      <p class="sub" style="margin:0 0 .75rem">Nearby uses Bluetooth only to share the 4-character duel code. The match still runs over WebRTC (PeerJS).</p>
+      <div class="stack">
+        <button type="button" id="btnHostNear">Host Nearby</button>
+        <button type="button" class="secondary" id="btnJoinNear">Join Nearby (Scan)</button>
+        <button type="button" class="secondary" id="btnJoinManual">Join with Code</button>
+      </div>
+      <div class="panel" id="hostPanel" style="margin-top:.75rem">
+        <div>Your duel code</div>
+        <div class="code" id="hostCode">····</div>
+        <button type="button" id="btnStartHost">Start Hosting Match</button>
+      </div>
+      <div class="panel" id="joinPanel" style="margin-top:.75rem">
+        <input id="joinCode" maxlength="4" placeholder="CODE" autocomplete="off" autocapitalize="characters" />
+        <button type="button" id="btnConfirmJoin">Join Match</button>
+      </div>
+    </div>
+
+    <p class="hint">Camera/Mic permission prompts on iOS are normal for WebRTC. Local Network may be requested for peer discovery. Online duels use the public PeerJS broker (HTTPS/WSS).</p>
+  </div>
+
+  <script src="nearby-bridge.js"></script>
+  <script>
+    (function () {
+      var statusEl = document.getElementById('status');
+      var badge = document.getElementById('envBadge');
+      function setStatus(t) { statusEl.textContent = t || ''; }
+
+      function mkCode() {
+        var ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+        var s = '';
+        for (var i = 0; i < 4; i++) s += ALPHA[Math.floor(Math.random() * ALPHA.length)];
+        return s;
+      }
+
+      document.getElementById('btnPlay').onclick = function () {
+        location.href = 'game.html';
+      };
+
+      document.getElementById('btnNearby').onclick = function () {
+        document.getElementById('nearbyPanel').classList.add('show');
+      };
+
+      document.getElementById('btnHostNear').onclick = function () {
+        document.getElementById('hostPanel').classList.add('show');
+        document.getElementById('joinPanel').classList.remove('show');
+        document.getElementById('hostCode').textContent = 'AUTO';
+        setStatus('Starting host — game will mint a code and advertise it over Bluetooth when possible.');
+        // Game mints PeerJS code; boot script advertises that exact code.
+        location.href = 'game.html?cc_host=1&cc_advertise=1';
+      };
+
+      document.getElementById('btnStartHost').onclick = function () {
+        location.href = 'game.html?cc_host=1&cc_advertise=1';
+      };
+
+      document.getElementById('btnJoinNear').onclick = async function () {
+        document.getElementById('joinPanel').classList.add('show');
+        document.getElementById('hostPanel').classList.remove('show');
+        setStatus('Scanning for Nearby hosts…');
+        try {
+          if (!window.CCNearby || !CCNearby.bleAvailable) throw new Error('BLE unavailable');
+          var code = await CCNearby.scanForCode(15000);
+          document.getElementById('joinCode').value = code;
+          setStatus('Found ' + code + ' — joining…');
+          CCNearby.launchGame({ join: code });
+        } catch (e) {
+          setStatus((e && e.message ? e.message : e) + ' — enter the code manually.');
+        }
+      };
+
+      document.getElementById('btnJoinManual').onclick = function () {
+        document.getElementById('joinPanel').classList.add('show');
+        document.getElementById('hostPanel').classList.remove('show');
+        setStatus('Enter the 4-character duel code.');
+      };
+
+      document.getElementById('btnConfirmJoin').onclick = function () {
+        var c = (document.getElementById('joinCode').value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
+        if (c.length !== 4) { setStatus('Need a 4-character code.'); return; }
+        CCNearby.launchGame({ join: c });
+      };
+
+      (async function boot() {
+        await CCNearby.init();
+        if (CCNearby.isNative) {
+          badge.textContent = 'iOS NATIVE';
+          document.getElementById('btnNearby').disabled = false;
+          setStatus(CCNearby.bleAvailable ? 'BLE central ready (scan). Host advertise needs Multipeer stub — codes still work via WebRTC.' : 'Native/web — Online WebRTC works; BLE optional.');
+        } else {
+          badge.textContent = 'BROWSER PREVIEW';
+          // Allow exercising UI in desktop preview
+          document.getElementById('btnNearby').disabled = false;
+          setStatus('Browser preview — Nearby UI works; BLE only on device.');
+        }
+      })();
+    })();
+  </script>
+</body>
+</html>
