@@ -20,7 +20,7 @@
 
 workflows:
   ios-testflight:
-    name: Connect Clash iOS → TestFlight
+    name: Pairstorm iOS → TestFlight
     instance_type: mac_mini_m2
     max_build_duration: 60
     environment:
@@ -97,7 +97,7 @@ workflows:
           failure: true
 
   ios-unsigned-check:
-    name: Connect Clash iOS compile check
+    name: Pairstorm iOS compile check
     instance_type: mac_mini_m2
     max_build_duration: 45
     environment:

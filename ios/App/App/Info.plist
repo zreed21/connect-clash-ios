@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Connect Clash</string>
+	<string>Pairstorm</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -62,13 +62,13 @@
 
 	<!-- WebRTC / media (often required even for data-channel PeerJS on iOS WKWebView) -->
 	<key>NSCameraUsageDescription</key>
-	<string>Connect Clash may use the camera interface required by WebRTC peer connections for online duels. No video is recorded or uploaded.</string>
+	<string>Pairstorm may use the camera interface required by WebRTC peer connections for online duels. No video is recorded or uploaded.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Connect Clash may use the microphone interface required by WebRTC peer connections for online duels. No audio is recorded or uploaded.</string>
+	<string>Pairstorm may use the microphone interface required by WebRTC peer connections for online duels. No audio is recorded or uploaded.</string>
 
 	<!-- Local network (Bonjour / LAN discovery; WebRTC ICE host candidates) -->
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Connect Clash uses the local network to find nearby players and establish peer-to-peer duel connections.</string>
+	<string>Pairstorm uses the local network to find nearby players and establish peer-to-peer duel connections.</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_connectclash._tcp</string>
@@ -77,9 +77,9 @@
 
 	<!-- Bluetooth / BLE Nearby discovery (duel code exchange only) -->
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Connect Clash uses Bluetooth to discover nearby players and exchange a short duel code. Gameplay still uses an internet peer connection.</string>
+	<string>Pairstorm uses Bluetooth to discover nearby players and exchange a short duel code. Gameplay still uses an internet peer connection.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
-	<string>Connect Clash can advertise a nearby duel code over Bluetooth so a rival can join without typing the code.</string>
+	<string>Pairstorm can advertise a nearby duel code over Bluetooth so a rival can join without typing the code.</string>
 
 	<!-- WKWebView media / inline playback -->
 	<key>UIBackgroundModes</key>

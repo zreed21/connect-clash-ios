@@ -1,11 +1,11 @@
-# Connect Clash — iOS (Capacitor + TestFlight)
+# Pairstorm — iOS (Capacitor + TestFlight)
 
 Native iOS shell around the **itch.io standalone HTML** build (`www/game.html`).  
 **Does not** wrap the Next.js / Postgres server under `html-game/src/`.
 
 | | |
 |---|---|
-| **App name** | Connect Clash |
+| **App name** | Pairstorm |
 | **Bundle ID** | `com.connectclash.app` |
 | **Capacitor** | 7.x |
 | **Web assets** | `www/` (shell + itch game + Nearby bridge) |
@@ -75,7 +75,7 @@ To finish true zero-type Nearby later: implement the Multipeer (or BLE periphera
    - `APPLE_TEAM_ID` — 10-character Team ID  
    - `APP_STORE_APPLE_ID` — numeric Apple ID from ASC → App → App Information (after you create the app)
 6. Create the App Store Connect app with bundle ID `com.connectclash.app` before the first signed build.
-7. Run workflow **Connect Clash iOS → TestFlight**.
+7. Run workflow **Pairstorm iOS → TestFlight**.
 8. On first success, install via TestFlight; accept Camera / Mic / Bluetooth / Local Network prompts when dueling.
 
 ### Create the App Store Connect API key

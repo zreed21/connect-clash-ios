@@ -1,7 +1,7 @@
 {
   "name": "connect-clash-ios",
   "version": "1.0.0",
-  "description": "Connect Clash \u2014 Capacitor iOS / TestFlight wrap (itch WebRTC + Nearby BLE discovery)",
+  "description": "Pairstorm \u2014 Capacitor iOS / TestFlight wrap (itch WebRTC + Nearby BLE discovery)",
   "main": "index.js",
   "scripts": {
     "build:web": "echo \"Static www/ assets \u2014 no bundler step\"",
