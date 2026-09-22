@@ -70,13 +70,26 @@ To finish true zero-type Nearby later: implement the Multipeer (or BLE periphera
 | `CERTIFICATE_PRIVATE_KEY` | RSA key for Codemagic-managed distribution cert (`openssl genrsa 2048`) |
 | `APPLE_TEAM_ID` | Your 10-character Team ID (optional if integration supplies it) |
 
-4. In Codemagic → Integrations, add **App Store Connect** and name it **`ConnectClash`** (matches `codemagic.yaml`), **or** switch publishing to explicit API key fields in the yaml.
-5. Replace placeholders in `codemagic.yaml`:
-   - `APP_STORE_APPLE_ID` — numeric ASC app id after the app exists  
-   - `APPLE_TEAM_ID`  
-   - email recipient under `publishing.email`
-6. Run workflow **Connect Clash iOS → TestFlight**.
-7. On first success, install via TestFlight; accept Camera / Mic / Bluetooth / Local Network prompts when dueling.
+4. Auth is **API key env vars only** (no Codemagic ASC integration required). Mark each secret as **Secure**.
+5. Also add to the same group (or workflow vars):
+   - `APPLE_TEAM_ID` — 10-character Team ID  
+   - `APP_STORE_APPLE_ID` — numeric Apple ID from ASC → App → App Information (after you create the app)
+6. Create the App Store Connect app with bundle ID `com.connectclash.app` before the first signed build.
+7. Run workflow **Connect Clash iOS → TestFlight**.
+8. On first success, install via TestFlight; accept Camera / Mic / Bluetooth / Local Network prompts when dueling.
+
+### Create the App Store Connect API key
+1. [App Store Connect](https://appstoreconnect.apple.com) → **Users and Access** → **Integrations** → **App Store Connect API**
+2. **Generate API Key** → access **Admin** or **App Manager**
+3. Download the `.p8` once (you cannot re-download)
+4. Note **Issuer ID** (top of page) and **Key ID**
+5. Paste into Codemagic as above — never commit the `.p8` to git
+
+### Generate CERTIFICATE_PRIVATE_KEY
+```bash
+openssl genrsa 2048
+```
+Copy the full PEM (BEGIN/END) into Codemagic as `CERTIFICATE_PRIVATE_KEY` (Secure).
 
 ### Workflow summary
 `npm install` → `npx cap sync ios` → `pod install` → fetch signing files → `xcode-project build-ipa` → publish TestFlight.

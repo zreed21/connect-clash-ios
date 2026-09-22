@@ -1,29 +1,28 @@
 # Codemagic CI — iOS archive + TestFlight for Connect Clash
-# Docs: https://docs.codemagic.io/yaml/yaml-getting-started/
 #
-# Required Codemagic / App Store Connect secrets (add in UI → Environment variables
-# or a variable group named "appstore_credentials"):
+# Auth: App Store Connect API key via env group `appstore_credentials`
+# (do NOT rely on a Codemagic ASC "integration" unless you create one separately).
 #
-#   APP_STORE_CONNECT_ISSUER_ID   — App Store Connect → Users → Keys → Issuer ID
-#   APP_STORE_CONNECT_KEY_IDENTIFIER — Key ID for the .p8 API key
-#   APP_STORE_CONNECT_PRIVATE_KEY   — Full contents of AuthKey_XXXXXX.p8
-#   CERTIFICATE_PRIVATE_KEY        — RSA private key used to create/fetch distribution cert
-#                                   (Codemagic code signing: openssl genrsa -out cert_key 2048)
+# Create these encrypted variables in Codemagic → Teams → Environment variables
+# (group name must be exactly: appstore_credentials):
 #
-# Optional:
-#   APPLE_TEAM_ID                  — 10-char Team ID (also set below as placeholder)
-#   APPLE_ID / APP_SPECIFIC_PASSWORD — only if not using API key publishing
+#   APP_STORE_CONNECT_ISSUER_ID        Issuer ID from ASC → Users and Access → Integrations → App Store Connect API
+#   APP_STORE_CONNECT_KEY_IDENTIFIER   Key ID for your .p8 key
+#   APP_STORE_CONNECT_PRIVATE_KEY      Full contents of AuthKey_XXXXXX.p8 (including BEGIN/END lines)
+#   CERTIFICATE_PRIVATE_KEY            RSA key for Codemagic-managed distribution cert
+#                                        openssl genrsa 2048 | pbcopy   (or openssl genrsa -out cert_key 2048)
 #
-# Bundle ID must match App Store Connect: com.connectclash.app
+# Also set (same group or workflow vars):
+#   APPLE_TEAM_ID                      10-char Team ID
+#   APP_STORE_APPLE_ID                 Numeric Apple ID of the ASC app (App Information)
+#
+# Bundle ID: com.connectclash.app
 
 workflows:
   ios-testflight:
     name: Connect Clash iOS → TestFlight
     instance_type: mac_mini_m2
     max_build_duration: 60
-    integrations:
-      # Create an App Store Connect integration in Codemagic and rename if needed
-      app_store_connect: ConnectClash
     environment:
       groups:
         - appstore_credentials
@@ -31,13 +30,26 @@ workflows:
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
         BUNDLE_ID: "com.connectclash.app"
-        APP_STORE_APPLE_ID: "0000000000"  # TODO: replace with numeric App Store Connect app id after first create
-        # Team ID placeholder — override via Codemagic env or integration
-        APPLE_TEAM_ID: "XXXXXXXXXX"
+        # Override these in the Codemagic UI (env group) once the ASC app exists:
+        # APP_STORE_APPLE_ID / APPLE_TEAM_ID
       node: 20
       xcode: latest
       cocoapods: default
     scripts:
+      - name: Verify App Store Connect API env
+        script: |
+          set -e
+          missing=0
+          for v in APP_STORE_CONNECT_ISSUER_ID APP_STORE_CONNECT_KEY_IDENTIFIER APP_STORE_CONNECT_PRIVATE_KEY CERTIFICATE_PRIVATE_KEY; do
+            if [ -z "${!v}" ]; then
+              echo "Missing secret: $v — add it to Codemagic env group 'appstore_credentials'"
+              missing=1
+            fi
+          done
+          if [ "$missing" = "1" ]; then
+            exit 1
+          fi
+          echo "ASC API env present (values not printed)."
       - name: Install npm dependencies
         script: |
           npm ci || npm install
@@ -47,14 +59,18 @@ workflows:
       - name: Install CocoaPods
         script: |
           cd ios/App && pod install
-      - name: Set up keychain / code signing (Codemagic)
+      - name: Set up keychain / code signing
         script: |
-          # Uses Codemagic's automatic code signing with App Store Connect API key.
-          # See: https://docs.codemagic.io/code-signing-yaml/signing-ios/
+          # Uses APP_STORE_CONNECT_* + CERTIFICATE_PRIVATE_KEY from the env group.
+          # Docs: https://docs.codemagic.io/yaml-code-signing/signing-ios/
           keychain initialize
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
-            --type ios_app_store \
-            --create
+            --type IOS_APP_STORE \
+            --create \
+            --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
+            --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+            --private-key "$APP_STORE_CONNECT_PRIVATE_KEY" \
+            --certificate-key "$CERTIFICATE_PRIVATE_KEY"
           keychain add-certificates
           xcode-project use-profiles
       - name: Build ipa
@@ -69,23 +85,17 @@ workflows:
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
     publishing:
       app_store_connect:
-        # Prefer Codemagic integration above; API key auth also works via env:
-        # auth: integration  (when integrations.app_store_connect is set)
-        #
-        # Or explicit API key (uncomment + set secrets):
-        # api_key: $APP_STORE_CONNECT_PRIVATE_KEY
-        # key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
-        # issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
-        # submit_to_app_store: false
       email:
         recipients:
-          - you@example.com  # TODO: your email
+          - zach@seenlow.com
         notify:
           success: true
           failure: true
 
-  # Local-style debug archive without publishing (optional)
   ios-unsigned-check:
     name: Connect Clash iOS compile check
     instance_type: mac_mini_m2
