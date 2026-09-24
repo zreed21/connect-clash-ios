@@ -17,9 +17,8 @@ public class CCNearbyNative: CAPPlugin, CAPBridgedPlugin {
     private var advertiser: MCNearbyServiceAdvertiser?
     private var browser: MCNearbyServiceBrowser?
     private var peerID: MCPeerID?
-    private var foundCodes: [String: String] = [:] // peerName -> code
+    private var foundCodes: [String: String] = [:]
     private var browseCall: CAPPluginCall?
-    private var advertiseCall: CAPPluginCall?
 
     @objc func advertise(_ call: CAPPluginCall) {
         let code = (call.getString("code") ?? "").uppercased()
@@ -66,21 +65,25 @@ public class CCNearbyNative: CAPPlugin, CAPBridgedPlugin {
         browser?.delegate = self
         browser?.startBrowsingForPeers()
 
+        call.keepAlive = true
         browseCall = call
 
-        // Keep call alive for up to 20 seconds, but we'll resolve when we find one
-        // If nothing found, timeout will reject
         DispatchQueue.main.asyncAfter(deadline: .now() + 20) { [weak self] in
-            guard let self = self, let bCall = self.browseCall, !bCall.isReleased else { return }
+            guard let self = self, let bCall = self.browseCall else { return }
             if self.foundCodes.isEmpty {
                 self.stopBrowseInternal()
                 bCall.reject("No nearby duels found")
+                self.browseCall = nil
             }
         }
     }
 
     @objc func stopBrowse(_ call: CAPPluginCall) {
         stopBrowseInternal()
+        if let bCall = browseCall {
+            bCall.reject("Cancelled")
+        }
+        browseCall = nil
         call.resolve()
     }
 
@@ -88,16 +91,11 @@ public class CCNearbyNative: CAPPlugin, CAPBridgedPlugin {
         browser?.stopBrowsingForPeers()
         browser?.delegate = nil
         browser = nil
-        if let bCall = browseCall, !bCall.isReleased {
-            // Don't reject if already resolved
-        }
-        browseCall = nil
     }
 }
 
 extension CCNearbyNative: MCNearbyServiceAdvertiserDelegate {
     public func advertiser(_ advertiser: MCNearbyServiceAdvertiser, didReceiveInvitationFromPeer peerID: MCPeerID, withContext context: Data?, invitationHandler: @escaping (Bool, MCSession?) -> Void) {
-        // For code exchange only, we don't need session - just accept to make browsing feel responsive, but not required
         invitationHandler(false, nil)
     }
 
@@ -111,8 +109,7 @@ extension CCNearbyNative: MCNearbyServiceBrowserDelegate {
         guard let code = info?["code"]?.uppercased(), code.count == 4 else { return }
         foundCodes[peerID.displayName] = code
 
-        // Resolve immediately on first found code for strict Bluetooth UX
-        if let bCall = browseCall, !bCall.isReleased {
+        if let bCall = browseCall {
             bCall.resolve(["code": code, "peer": peerID.displayName])
             browseCall = nil
             stopBrowseInternal()
@@ -125,7 +122,7 @@ extension CCNearbyNative: MCNearbyServiceBrowserDelegate {
 
     public func browser(_ browser: MCNearbyServiceBrowser, didNotStartBrowsingForPeers error: Error) {
         print("[CCNearbyNative] Browse failed: \(error.localizedDescription)")
-        if let bCall = browseCall, !bCall.isReleased {
+        if let bCall = browseCall {
             bCall.reject("Browse failed: \(error.localizedDescription)")
             browseCall = nil
         }
