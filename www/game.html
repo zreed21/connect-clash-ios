@@ -728,10 +728,21 @@ function netHeartbeatStart(){
 function netHeartbeatStop(){ if(hbTimer){ clearInterval(hbTimer); hbTimer=null; } }
 function netHandlers(){
   Net.on({
-    ready:function(c){ S.roomCode=c; if(S.isHost) showHostLobby(false); },
+    ready:function(c){ 
+      S.roomCode=c; 
+      if(S.isHost){
+        if(S.nearbyStrict) showBluetoothHostPopup(c);
+        else showHostLobby(false);
+      }
+    },
     linked:function(){
       S.net.linked=true;
-      if(!S.isHost){ S.net.t0=Date.now(); Net.send({t:"hello",name:S.meName}); showJoinLobby("linked"); }
+      if(!S.isHost){ 
+        S.net.t0=Date.now(); 
+        Net.send({t:"hello",name:S.meName}); 
+        if(S.nearbyStrict) showBluetoothLinkedPopup();
+        else showJoinLobby("linked"); 
+      }
       netHeartbeatStart();
     },
     msg:onNetMsg, closed:onNetClosed, err:onNetErr
@@ -741,6 +752,7 @@ function netHost(){
   if(typeof Peer==="undefined"){ toast("Peer networking unavailable in this browser","danger"); return; }
   Snd.unlock(); S.meName=(S.meName||"YOU").trim()||"YOU"; store("wco_name",S.meName);
   S.mode="net"; S.isHost=true; S.clockOffset=0; S.cpuName="RIVAL";
+  S.nearbyStrict=false;
   netReset(); S.matchSeed=Math.floor(Math.random()*1e9);
   netHandlers(); showHostLobby(true); Net.host();
 }
@@ -750,6 +762,7 @@ function netJoin(raw){
   if(c.length!==4){ toast("Duel codes are 4 characters","danger"); return; }
   Snd.unlock(); S.meName=(S.meName||"YOU").trim()||"YOU"; store("wco_name",S.meName);
   S.mode="net"; S.isHost=false; S.roomCode=c; S.clockOffset=0; S.cpuName="HOST";
+  S.nearbyStrict=false;
   netReset(); netHandlers(); showJoinLobby("calling"); Net.join(c);
 }
 
@@ -758,6 +771,7 @@ function hostNearbyStrict(){
   Snd.unlock();
   S.meName=(S.meName||"YOU").trim()||"YOU"; store("wco_name",S.meName);
   S.mode="net"; S.isHost=true; S.clockOffset=0; S.cpuName="NEARBY RIVAL";
+  S.nearbyStrict=true;
   netReset(); S.matchSeed=Math.floor(Math.random()*1e9);
   netHandlers();
   // Generate code for underlying transport, but don't show code UI - strict Bluetooth
@@ -789,6 +803,7 @@ function joinNearbyStrict(){
     }).then(function(code){
       if(code && code.length===4){
         S.mode="net"; S.isHost=false; S.roomCode=code; S.clockOffset=0; S.cpuName="NEARBY HOST";
+        S.nearbyStrict=true;
         netReset(); netHandlers(); showJoinLobby("calling"); Net.join(code);
       }
     }).catch(function(e){
@@ -808,7 +823,7 @@ function showBluetoothHostPopup(code){
     '<h2 style="font-size:clamp(20px,5.5vw,28px)">LOOKING FOR PLAYERS</h2>'+
     '<div style="margin:18px auto"><span class="spin" style="width:28px;height:28px;border-width:3px"></span></div>'+
     '<p class="sub">Your duel is visible nearby via Bluetooth.<br>Keep this screen open - a nearby player can join instantly.</p>'+
-    '<div class="code-row" style="opacity:0.15"><div class="code-tile">'+code.split("").join('</div><div class="code-tile">')+'</div></div>'+
+
     '<div class="ov-actions">'+
       '<button class="btn btn-ghost" id="btnCancelBT"><span>CANCEL</span></button>'+
     '</div>'+
@@ -817,7 +832,7 @@ function showBluetoothHostPopup(code){
   var cb=document.getElementById('btnCancelBT');
   if(cb) cb.addEventListener('click', function(){ 
     if(window.CCNearby) CCNearby.stopAdvertising();
-    Net.cleanup(); S.mode="cpu"; renderHome(); 
+    Net.cleanup(); S.mode="cpu"; S.nearbyStrict=false; renderHome(); 
   });
 }
 
@@ -839,11 +854,20 @@ function showBluetoothJoinPopup(){
       if(CCNearby.stopBrowse) CCNearby.stopBrowse();
       CCNearby.stopAdvertising();
     }
-    Net.cleanup(); S.mode="cpu"; renderHome(); 
+    Net.cleanup(); S.mode="cpu"; S.nearbyStrict=false; renderHome(); 
   });
 }
 
-
+function showBluetoothLinkedPopup(){
+  S.screen="lobby"; stopTick();
+  showOverlay('<div class="ov"><div class="ov-card glass">'+
+    '<p class="eyebrow">NEARBY BLUETOOTH &middot; CONNECTED</p>'+
+    '<h2 style="font-size:clamp(20px,5.5vw,28px)">FOUND A DUEL!</h2>'+
+    '<div style="margin:18px auto"><span class="spin" style="width:28px;height:28px;border-width:3px"></span></div>'+
+    '<p class="sub">Linked to nearby host - starting duel...</p>'+
+    '<p class="hint">BLUETOOTH LINKED &middot; STARTING</p>'+
+  '</div></div>');
+}
 
 function onNetMsg(m){
   if(!m||!m.t||S.mode!=="net") return;
@@ -1072,6 +1096,7 @@ var S={
   diff: store("wco_diff") || "sharp",
   muted: store("wco_muted")==="1",
   uiMode: store("wco_mode") || "solo",
+  nearbyStrict: false,
   puzzle:null, puzzleIdx:-1, order:[], wordCat:{}, solved:[], selected:[],
   mistakes:0, guesses:[], busted:false, finishedMs:null,
   cpuName:"RIVAL", cpuTimes:[], cpuDone:0,
