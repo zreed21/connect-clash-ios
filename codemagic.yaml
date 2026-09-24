@@ -110,15 +110,21 @@ workflows:
             --private-key "$APP_STORE_CONNECT_PRIVATE_KEY" \
             --certificate-key "$CERTIFICATE_PRIVATE_KEY"
           keychain add-certificates
+          cd "$CM_BUILD_DIR/ios/App"
           xcode-project use-profiles
       - name: Build ipa
         script: |
-          cd ios/App
+          cd "$CM_BUILD_DIR/ios/App"
+          # App Store rejects a repeat of build 12. A UTC stamp is always higher.
+          BUILD_NUM="$(date -u +%Y%m%d%H%M)"
           xcode-project build-ipa \
             --workspace "$CM_BUILD_DIR/ios/App/App.xcworkspace" \
-            --scheme "$XCODE_SCHEME"
+            --scheme "$XCODE_SCHEME" \
+            --archive-directory "$CM_BUILD_DIR/build/ios/xcarchive" \
+            --ipa-directory "$CM_BUILD_DIR/build/ios/ipa" \
+            --archive-xcargs "CURRENT_PROJECT_VERSION=$BUILD_NUM"
     artifacts:
-      - ios/App/build/ios/ipa/*.ipa
+      - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
     publishing:
