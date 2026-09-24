@@ -20,8 +20,6 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
-	<!-- Export compliance: only standard, exempt encryption (HTTPS/WSS broker +
-	     WebRTC DTLS-SRTP). No proprietary/non-exempt crypto -> NO. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
@@ -54,8 +52,6 @@
 	<key>UIStatusBarStyle</key>
 	<string>UIStatusBarStyleLightContent</string>
 
-	<!-- Fullscreen / notch: content under status bar; game uses viewport-fit=cover -->
-	<!-- App Transport Security: allow only secure defaults; PeerJS uses WSS:443 -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
@@ -64,32 +60,17 @@
 		<true/>
 	</dict>
 
-	<!-- WebRTC / media (often required even for data-channel PeerJS on iOS WKWebView) -->
 	<key>NSCameraUsageDescription</key>
 	<string>Pairstorm may use the camera interface required by WebRTC peer connections for online duels. No video is recorded or uploaded.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Pairstorm may use the microphone interface required by WebRTC peer connections for online duels. No audio is recorded or uploaded.</string>
 
-	<!-- Local network (Bonjour / LAN discovery; WebRTC ICE host candidates) -->
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Pairstorm uses the local network to find nearby players and establish peer-to-peer duel connections.</string>
+	<string>Pairstorm uses the local network to establish peer-to-peer duel connections for online play.</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_connectclash._tcp</string>
 		<string>_connectclash._udp</string>
-	</array>
-
-	<!-- Bluetooth / BLE Nearby discovery (duel code exchange only) -->
-	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Pairstorm uses Bluetooth to discover nearby players and exchange a short duel code. Gameplay still uses an internet peer connection.</string>
-	<key>NSBluetoothPeripheralUsageDescription</key>
-	<string>Pairstorm can advertise a nearby duel code over Bluetooth so a rival can join without typing the code.</string>
-
-	<!-- WKWebView media / inline playback -->
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>bluetooth-central</string>
-		<string>bluetooth-peripheral</string>
 	</array>
 </dict>
 </plist>

@@ -229,7 +229,7 @@
   .count-sub{margin-top:14px;font-size:10px;font-weight:800;letter-spacing:.3em;color:rgba(255,255,255,.42)}
   .count-top{margin-bottom:14px;font-size:10px;font-weight:800;letter-spacing:.34em;color:rgba(255,255,255,.5)}
   /* mode tabs + online duel bits */
-  .tabs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:14px;padding:4px;border-radius:16px;
+  .tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:14px;padding:4px;border-radius:16px;
     border:1px solid rgba(255,255,255,.1);background:rgba(0,0,0,.25)}
   .tab{border:0;cursor:pointer;border-radius:12px;padding:10px 6px;background:transparent;color:rgba(255,255,255,.55);
     font-family:var(--disp);font-size:11px;font-weight:800;letter-spacing:.12em;transition:all .15s}
@@ -258,6 +258,31 @@
     border-radius:9999px;border:1px solid rgba(251,191,36,.35);background:rgba(251,191,36,.12);color:#fde68a;
     padding:8px 16px;font-size:11.5px;font-weight:700;letter-spacing:.04em;backdrop-filter:blur(10px);animation:toastIn .25s ease}
   .hidden{display:none !important}
+
+  .storm-preview{position:fixed;inset:0;z-index:2;pointer-events:none;overflow:hidden;opacity:0;transition:opacity .35s ease}
+  .storm-preview.on{opacity:1}
+  .storm-preview .rain{position:absolute;top:-30px;width:2px;height:18px;background:linear-gradient(to bottom, transparent, rgba(125,211,252,.9));border-radius:1px;animation:rainFall linear forwards;will-change:transform}
+  @keyframes rainFall{to{transform:translateY(112vh)}}
+  .storm-preview .lightning{position:fixed;inset:0;background:radial-gradient(120% 60% at 50% 10%, rgba(200,230,255,.25), transparent 70%);opacity:0}
+  .storm-preview .lightning.flash{animation:previewFlash .32s ease}
+  @keyframes previewFlash{0%,100%{opacity:0}8%{opacity:.7}14%{opacity:.15}22%{opacity:.9}30%{opacity:.2}38%{opacity:.5}}
+  .storm-preview .cloud{position:absolute;top:-20px;left:0;right:0;height:140px;background:linear-gradient(to bottom, rgba(30,40,80,.35), transparent);opacity:.6}
+
+
+  .raceopts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+  .raceopt{border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);padding:10px 6px;cursor:pointer;text-align:center;transition:all .15s}
+  .raceopt b{display:block;font-family:var(--disp);font-size:13px;letter-spacing:.08em}
+  .raceopt i{display:block;font-style:normal;font-size:8px;letter-spacing:.12em;color:rgba(255,255,255,.45);margin-top:3px}
+  .raceopt.on{border-color:rgba(56,189,248,.6);background:rgba(56,189,248,.14);box-shadow:0 0 0 3px rgba(56,189,248,.12)}
+  .storm-overlay{position:fixed;inset:0;z-index:100;pointer-events:none;background:radial-gradient(100% 100% at 50% 50%, rgba(30,30,60,0.8), rgba(5,5,15,0.95));animation:stormIn 0.4s ease}
+  .storm-flash{position:fixed;inset:0;z-index:101;pointer-events:none;background:rgba(200,230,255,0.9);animation:flash 0.25s ease 2}
+  @keyframes stormIn{from{opacity:0}to{opacity:1}}
+  @keyframes flash{0%,100%{opacity:0}10%,30%{opacity:0.8}20%{opacity:0.2}}
+  .race-clock{font-family:var(--disp);font-size:11px;letter-spacing:.18em;color:var(--sky);margin-top:6px;display:flex;align-items:center;gap:6px;justify-content:center}
+  .race-clock.warn{color:#fb7185;animation:pulseSoft 0.6s ease-in-out infinite}
+  .race-clock .bar{width:60px;height:4px;background:rgba(255,255,255,.15);border-radius:999px;overflow:hidden}
+  .race-clock .bar-fill{height:100%;background:linear-gradient(90deg,var(--sky),var(--violet));transition:width 0.2s linear}
+
   .blurboard{filter:blur(9px);pointer-events:none}
   .grad-win{background:linear-gradient(95deg,var(--amber),#fb923c);-webkit-background-clip:text;background-clip:text;color:transparent}
   .txt-lose{color:#fda4af}.txt-draw{color:#fff}
@@ -608,6 +633,77 @@ var Snd = (function(){
 })();
 
 /* ----------------------------- PARTICLES ----------------------------- */
+var StormPreview = (function(){
+  var container=null, rainInt=0, lightInt=0;
+  function ensure(){
+    if(container) return container;
+    container=document.createElement('div');
+    container.className='storm-preview';
+    container.id='stormPreview';
+    var cloud=document.createElement('div');
+    cloud.className='cloud';
+    container.appendChild(cloud);
+    document.body.appendChild(container);
+    return container;
+  }
+  function spawnRain(n){
+    var c=ensure();
+    if(!c.classList.contains('on')) return;
+    for(var i=0;i<n;i++){
+      var d=document.createElement('div');
+      d.className='rain';
+      d.style.left=(Math.random()*100)+'vw';
+      d.style.animationDuration=(0.45+Math.random()*0.7)+'s';
+      d.style.opacity=(0.25+Math.random()*0.65);
+      d.style.height=(12+Math.random()*22)+'px';
+      d.style.transform='translateX('+(Math.random()*20-10)+'px)';
+      c.appendChild(d);
+      (function(el){ setTimeout(function(){ el.remove(); }, 1600); })(d);
+    }
+  }
+  function flash(){
+    var c=ensure();
+    if(!c.classList.contains('on')) return;
+    var l=document.createElement('div');
+    l.className='lightning';
+    c.appendChild(l);
+    void l.offsetWidth;
+    l.classList.add('flash');
+    (function(el){ setTimeout(function(){ el.remove(); }, 500); })(l);
+  }
+  return {
+    start:function(){
+      var c=ensure();
+      if(c.classList.contains('on')) return;
+      c.classList.add('on');
+      this.stopTimers();
+      var self=this;
+      rainInt=setInterval(function(){ spawnRain(4); }, 70);
+      lightInt=setInterval(function(){ if(Math.random()<0.35) flash(); }, 1100);
+      // initial burst
+      spawnRain(12);
+    },
+    stopTimers:function(){
+      if(rainInt){ clearInterval(rainInt); rainInt=0; }
+      if(lightInt){ clearInterval(lightInt); lightInt=0; }
+    },
+    stop:function(){
+      this.stopTimers();
+      var c=container;
+      if(!c) return;
+      c.classList.remove('on');
+      setTimeout(function(){
+        if(c && !c.classList.contains('on')){
+          // keep cloud but remove rain/lightning
+          var keeps=c.querySelector('.cloud');
+          c.innerHTML='';
+          if(keeps) c.appendChild(keeps);
+        }
+      }, 400);
+    }
+  };
+})();
+
 var FX = (function(){
   var cv=$("#fx"), parts=[], dpr=1;
   var ctx=null;
@@ -653,6 +749,24 @@ var FX = (function(){
   function lose(){
     burst(innerWidth/2, innerHeight*.5, ["#64748b","#475569","#94a3b8"], isMobile?34:55, {speed:6,size:6,g:.12,decay:.014});
   }
+  function storm(){
+    var overlay = document.createElement('div');
+    overlay.className='storm-overlay';
+    document.body.appendChild(overlay);
+    var flash = document.createElement('div');
+    flash.className='storm-flash';
+    document.body.appendChild(flash);
+    setTimeout(function(){ overlay.remove(); }, 1200);
+    setTimeout(function(){ flash.remove(); }, 600);
+    burst(innerWidth/2, innerHeight*.4, ["#38bdf8","#a78bfa","#f7f2ff","#1e293b"], isMobile?140:220, {speed:14,size:9,g:.28,decay:.009});
+    for(var i=0;i< (isMobile?18:30); i++){
+      (function(ii){
+        setTimeout(function(){
+          burst(Math.random()*innerWidth, -20, ["#7dd3fc"], 3, {speed:18,g:0.6,decay:0.012,size:2});
+        }, ii*40);
+      })(i);
+    }
+  }
   function frame(){
     if(!ctx){ requestAnimationFrame(frame); return; }
     ctx.clearRect(0,0,innerWidth,innerHeight);
@@ -669,7 +783,7 @@ var FX = (function(){
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
-  return {burst:burst, tileBurst:tileBurst, win:win, lose:lose};
+  return {burst:burst, tileBurst:tileBurst, win:win, lose:lose, storm:storm};
 })();
 
 /* ------------------------------- SHAKE ------------------------------- */
@@ -762,7 +876,7 @@ function wordsOf(idx){ var w=[]; PUZZLES[idx].forEach(function(c){ for(var i=1;i
 function buildWordCat(idx){ var m={}; PUZZLES[idx].forEach(function(c,ci){ for(var i=1;i<c.length;i++) m[c[i]]=ci; }); return m; }
 
 function netReset(){
-  S.net={linked:false,oppReady:false,t0:0,rematch:false,oppRematch:false,verifyUntil:0,gone:false,lastHeard:Date.now(),
+  S.net={linked:false,oppReady:false,t0:0,rematch:false,oppRematch:false,verifyUntil:0,gone:false,lastHeard:Date.now(),autoExitId:0,autoExitInt:0,autoExitRem:30,
     oppProg:{solved:0,mistakes:0,busted:false,finishedMs:null}};
   S.pendingBust=false; S.round=1; S.wins={me:0,cpu:0}; S.lastPuzzleIdx=-1;
 }
@@ -784,21 +898,10 @@ function netHeartbeatStart(){
 function netHeartbeatStop(){ if(hbTimer){ clearInterval(hbTimer); hbTimer=null; } }
 function netHandlers(){
   Net.on({
-    ready:function(c){ 
-      S.roomCode=c; 
-      if(S.isHost){
-        if(S.nearbyStrict) showBluetoothHostPopup(c);
-        else showHostLobby(false);
-      }
-    },
+    ready:function(c){ S.roomCode=c; if(S.isHost) showHostLobby(false); },
     linked:function(){
       S.net.linked=true;
-      if(!S.isHost){ 
-        S.net.t0=Date.now(); 
-        Net.send({t:"hello",name:S.meName}); 
-        if(S.nearbyStrict) showBluetoothLinkedPopup();
-        else showJoinLobby("linked"); 
-      }
+      if(!S.isHost){ S.net.t0=Date.now(); Net.send({t:"hello",name:S.meName}); showJoinLobby("linked"); }
       netHeartbeatStart();
     },
     msg:onNetMsg, closed:onNetClosed, err:onNetErr
@@ -808,7 +911,6 @@ function netHost(){
   if(typeof Peer==="undefined"){ toast("Peer networking unavailable in this browser","danger"); return; }
   Snd.unlock(); S.meName=(S.meName||"YOU").trim()||"YOU"; store("wco_name",S.meName);
   S.mode="net"; S.isHost=true; S.clockOffset=0; S.cpuName="RIVAL";
-  S.nearbyStrict=false;
   netReset(); S.matchSeed=Math.floor(Math.random()*1e9);
   netHandlers(); showHostLobby(true); Net.host();
 }
@@ -818,111 +920,7 @@ function netJoin(raw){
   if(c.length!==4){ toast("Duel codes are 4 characters","danger"); return; }
   Snd.unlock(); S.meName=(S.meName||"YOU").trim()||"YOU"; store("wco_name",S.meName);
   S.mode="net"; S.isHost=false; S.roomCode=c; S.clockOffset=0; S.cpuName="HOST";
-  S.nearbyStrict=false;
   netReset(); netHandlers(); showJoinLobby("calling"); Net.join(c);
-}
-
-function hostNearbyStrict(){
-  if(typeof Peer==="undefined"){ toast("Peer networking unavailable","danger"); return; }
-  Snd.unlock();
-  S.meName=(S.meName||"YOU").trim()||"YOU"; store("wco_name",S.meName);
-  S.mode="net"; S.isHost=true; S.clockOffset=0; S.cpuName="NEARBY RIVAL";
-  S.nearbyStrict=true;
-  netReset(); S.matchSeed=Math.floor(Math.random()*1e9);
-  netHandlers();
-  // Generate code for underlying transport, but don't show code UI - strict Bluetooth
-  var tempCode = (function(){ var ALPHA="ABCDEFGHJKMNPQRSTUVWXYZ23456789"; var r=""; for(var i=0;i<4;i++) r+=ALPHA[Math.floor(Math.random()*ALPHA.length)]; return r; })();
-  S.roomCode = tempCode;
-  showBluetoothHostPopup(tempCode);
-  // Start Multipeer advertise via bridge
-  if(window.CCNearby){
-    CCNearby.init().then(function(){
-      return CCNearby.advertiseCode(tempCode);
-    }).catch(function(){});
-  }
-  Net.host();
-}
-
-function joinNearbyStrict(){
-  if(typeof Peer==="undefined"){ toast("Peer networking unavailable","danger"); return; }
-  Snd.unlock();
-  S.meName=(S.meName||"YOU").trim()||"YOU"; store("wco_name",S.meName);
-  showBluetoothJoinPopup();
-  // Strict Bluetooth browse
-  if(window.CCNearby){
-    CCNearby.init().then(function(){
-      if(CCNearby.browseForCode){
-        return CCNearby.browseForCode(20000);
-      } else {
-        return CCNearby.scanForCode(20000);
-      }
-    }).then(function(code){
-      if(code && code.length===4){
-        S.mode="net"; S.isHost=false; S.roomCode=code; S.clockOffset=0; S.cpuName="NEARBY HOST";
-        S.nearbyStrict=true;
-        netReset(); netHandlers(); showJoinLobby("calling"); Net.join(code);
-      }
-    }).catch(function(e){
-      hideOverlays();
-      toast(e && e.message ? e.message : "No nearby duels found", "danger");
-      renderHome();
-    });
-  } else {
-    toast("Nearby unavailable on this device","danger");
-  }
-}
-
-function showBluetoothHostPopup(code){
-  S.screen="lobby"; stopTick();
-  showOverlay('<div class="ov"><div class="ov-card glass">'+
-    '<p class="eyebrow">NEARBY BLUETOOTH &middot; HOSTING</p>'+
-    '<h2 style="font-size:clamp(20px,5.5vw,28px)">LOOKING FOR PLAYERS</h2>'+
-    '<div style="margin:18px auto"><span class="spin" style="width:28px;height:28px;border-width:3px"></span></div>'+
-    '<p class="sub">Your duel is visible nearby via Bluetooth.<br>Keep this screen open - a nearby player can join instantly.</p>'+
-
-    '<div class="ov-actions">'+
-      '<button class="btn btn-ghost" id="btnCancelBT"><span>CANCEL</span></button>'+
-    '</div>'+
-    '<p class="hint">HOST IS SEARCHING &middot; NO CODE NEEDED FOR NEARBY</p>'+
-  '</div></div>');
-  var cb=document.getElementById('btnCancelBT');
-  if(cb) cb.addEventListener('click', function(){ 
-    if(window.CCNearby) CCNearby.stopAdvertising();
-    Net.cleanup(); S.mode="cpu"; S.nearbyStrict=false; renderHome(); 
-  });
-}
-
-function showBluetoothJoinPopup(){
-  S.screen="lobby"; stopTick();
-  showOverlay('<div class="ov"><div class="ov-card glass">'+
-    '<p class="eyebrow">NEARBY BLUETOOTH &middot; SEARCHING</p>'+
-    '<h2 style="font-size:clamp(20px,5.5vw,28px)">FINDING DUELS</h2>'+
-    '<div style="margin:18px auto"><span class="spin" style="width:28px;height:28px;border-width:3px"></span></div>'+
-    '<p class="sub">Scanning for nearby duels over Bluetooth...<br>Make sure the host is nearby and hosting.</p>'+
-    '<div class="ov-actions">'+
-      '<button class="btn btn-ghost" id="btnCancelBT2"><span>CANCEL</span></button>'+
-    '</div>'+
-    '<p class="hint">SEARCHING NEARBY &middot; ~30FT RANGE</p>'+
-  '</div></div>');
-  var cb=document.getElementById('btnCancelBT2');
-  if(cb) cb.addEventListener('click', function(){ 
-    if(window.CCNearby){ 
-      if(CCNearby.stopBrowse) CCNearby.stopBrowse();
-      CCNearby.stopAdvertising();
-    }
-    Net.cleanup(); S.mode="cpu"; S.nearbyStrict=false; renderHome(); 
-  });
-}
-
-function showBluetoothLinkedPopup(){
-  S.screen="lobby"; stopTick();
-  showOverlay('<div class="ov"><div class="ov-card glass">'+
-    '<p class="eyebrow">NEARBY BLUETOOTH &middot; CONNECTED</p>'+
-    '<h2 style="font-size:clamp(20px,5.5vw,28px)">FOUND A DUEL!</h2>'+
-    '<div style="margin:18px auto"><span class="spin" style="width:28px;height:28px;border-width:3px"></span></div>'+
-    '<p class="sub">Linked to nearby host - starting duel...</p>'+
-    '<p class="hint">BLUETOOTH LINKED &middot; STARTING</p>'+
-  '</div></div>');
 }
 
 function onNetMsg(m){
@@ -971,7 +969,21 @@ function onNetMsg(m){
   }
   if(m.t==="rematch"){
     S.net.oppRematch=true; Snd.play("ping"); paintRematch();
-    if(S.isHost&&S.net.rematch&&S.over){ S.round++; netBeginRound(); }
+    if(S.isHost&&S.net.rematch&&S.over){ clearAutoExit(); S.round++; netBeginRound(); }
+    else if(!S.isHost&&S.net.rematch&&S.net.oppRematch&&S.over){
+      // joiner: waiting for host to start, but ensure UI updates
+      paintRematch();
+    }
+    return;
+  }
+  if(m.t==="exit"){
+    clearAutoExit();
+    S.net.gone=true;
+    toast(S.cpuName+" left the duel — returning to menu","info");
+    netHeartbeatStop();
+    Net.cleanup();
+    S.mode="cpu";
+    renderHome();
     return;
   }
   if(m.t==="bye"){ onNetClosed(); }
@@ -979,12 +991,16 @@ function onNetMsg(m){
 
 function onNetClosed(){
   if(S.mode!=="net") return;
+  clearAutoExit();
   S.net.linked=false; S.net.gone=true;
   netHeartbeatStop();
   Net.cleanup();
   if(S.screen!=="arena"){ toast(S.cpuName+" disconnected","danger"); S.mode="cpu"; renderHome(); return; }
   if(!S.over){ finishRound("walkover"); return; }
-  toast(S.cpuName+" disconnected","danger"); paintRematch();
+  // After round is over, if rival disconnects or exits, both go back to menu per spec
+  toast(S.cpuName+" left the duel — returning to menu","info");
+  S.mode="cpu";
+  renderHome();
 }
 function onNetErr(type){
   var msg =
@@ -1048,6 +1064,7 @@ function showJoinLobby(state){
 }
 
 function netBeginRound(){
+  clearAutoExit();
   var r=S.round;
   var rng=mulberry32((S.matchSeed>>>0)+r*7919);
   var idx=Math.floor(rng()*PUZZLES.length);
@@ -1058,6 +1075,8 @@ function netBeginRound(){
   netApplyStart({round:r,puzzleIdx:idx,seed:seed,startsAt:startsAt});
 }
 function netApplyStart(m){
+  clearAutoExit();
+  hideOverlays();
   S.net.rematch=false; S.net.oppRematch=false; S.net.verifyUntil=0; S.net.gone=false;
   S.net.oppProg={solved:0,mistakes:0,busted:false,finishedMs:null};
   S.pendingBust=false; S.cpuName=S.cpuName||"RIVAL";
@@ -1110,10 +1129,12 @@ function showBustWait(){
   '</div></div>');
 }
 function netExit(){
-  Net.send({t:"bye"});
+  clearAutoExit();
+  try{ Net.send({t:"exit"}); }catch(e){}
+  try{ Net.send({t:"bye"}); }catch(e){}
   netHeartbeatStop();
   Net.cleanup();
-  S.mode="cpu"; S.net.linked=false;
+  S.mode="cpu"; S.net.linked=false; S.net.gone=true;
 }
 
 /* ------------------------------- TOASTS ------------------------------ */
@@ -1152,7 +1173,8 @@ var S={
   diff: store("wco_diff") || "sharp",
   muted: store("wco_muted")==="1",
   uiMode: store("wco_mode") || "solo",
-  nearbyStrict: false,
+  raceInterval: parseInt(store("wco_race")||"30000",10),
+  raceDeadline: 0,
   puzzle:null, puzzleIdx:-1, order:[], wordCat:{}, solved:[], selected:[],
   mistakes:0, guesses:[], busted:false, finishedMs:null,
   cpuName:"RIVAL", cpuTimes:[], cpuDone:0,
@@ -1163,6 +1185,7 @@ var S={
   // ---- online (peer-to-peer) duel ----
   mode:"cpu", isHost:false, roomCode:"", matchSeed:1, clockOffset:0, pendingBust:false,
   net:{linked:false,oppReady:false,t0:0,rematch:false,oppRematch:false,verifyUntil:0,gone:false,lastHeard:0,
+       autoExitId:0, autoExitInt:0, autoExitRem:30,
        oppProg:{solved:0,mistakes:0,busted:false,finishedMs:null}}
 };
 Snd.setMuted(S.muted);
@@ -1176,6 +1199,7 @@ function elapsed(){
 
 /* ------------------------------- HOME -------------------------------- */
 function renderHome(){
+  try{ StormPreview.stop(); }catch(e){}
   S.screen="home";
   stopTick();
   hideOverlays();
@@ -1211,14 +1235,23 @@ function renderHome(){
           '<div class="field-label">YOUR CALLSIGN</div>'+
           '<input class="name" id="nameInput" maxlength="12" value="'+esc(S.meName)+'" placeholder="YOU" />'+
           '<div class="tabs">'+
-            '<button class="tab'+(S.uiMode==="solo"?" on":"")+'" data-mode="solo">SOLO<small>VS CPU</small></button>'+
-            '<button class="tab'+(S.uiMode==="net"?" on":"")+'" data-mode="net">ONLINE<small>CODE</small></button>'+
-            '<button class="tab'+(S.uiMode==="nearby"?" on":"")+'" data-mode="nearby">NEARBY<small>BLUETOOTH</small></button>'+
+            '<button class="tab'+(S.uiMode==="solo"?" on":"")+'" data-mode="solo">SOLO<small>PRACTICE & RACE</small></button>'+
+            '<button class="tab'+(S.uiMode==="net"?" on":"")+'" data-mode="net">ONLINE DUEL<small>CODE</small></button>'+
           '</div>'+
           '<div id="panelSolo"'+(S.uiMode!=="solo"?' class="hidden"':'')+'>'+
-            '<div class="field-label" style="margin-top:16px">RIVAL DIFFICULTY</div>'+
+            '<div class="field-label" style="margin-top:16px">VS CPU RIVAL</div>'+
             '<div class="diffs">'+diffBtns+'</div>'+
-            '<button class="btn btn-primary play" id="btnPlay">'+ICON.swords+'<span>ENTER THE ARENA</span></button>'+
+            '<button class="btn btn-primary play" id="btnPlay">'+ICON.swords+'<span>ENTER THE ARENA (VS CPU)</span></button>'+
+            '<div class="field-label" style="margin-top:18px">PRACTICE & RACE</div>'+
+            '<button class="btn btn-ghost" id="btnPractice" style="margin-top:8px;width:100%">'+ICON.grid+'<span>PRACTICE MODE - ENDLESS SOLO</span></button>'+
+            '<div class="field-label" style="margin-top:14px">RACE THE STORM</div>'+
+            '<p class="netnote" style="margin-top:6px">Solve a group before the timer runs out or the storm takes you!</p>'+
+            '<div class="raceopts">'+
+              '<button class="raceopt'+(S.raceInterval===15000?' on':'')+'" data-race="15000"><b>15s</b><i>BLITZ</i></button>'+
+              '<button class="raceopt'+(S.raceInterval===30000?' on':'')+'" data-race="30000"><b>30s</b><i>STORM</i></button>'+
+              '<button class="raceopt'+(S.raceInterval===60000?' on':'')+'" data-race="60000"><b>60s</b><i>CALM</i></button>'+
+            '</div>'+
+            '<button class="btn btn-net" id="btnRace" style="margin-top:10px;width:100%">'+ICON.bolt+'<span>RACE THE STORM</span></button>'+
           '</div>'+
           '<div id="panelNet"'+(S.uiMode!=="net"?' class="hidden"':'')+'>'+
             '<div class="field-label" style="margin-top:16px">RIVAL&rsquo;S DUEL CODE</div>'+
@@ -1229,15 +1262,7 @@ function renderHome(){
             '<button class="btn btn-primary play" id="btnHost" style="margin-top:10px">'+ICON.swords+'<span>HOST A DUEL &amp; GET A CODE</span></button>'+
             '<p class="netnote">Host to get a 4-letter code. Share it — same puzzle, same countdown. First to finish wins.</p>'+
           '</div>'+
-          '<div id="panelNearby"'+(S.uiMode!=="nearby"?' class="hidden"':'')+'>'+
-            '<div class="field-label" style="margin-top:16px">NEARBY BLUETOOTH</div>'+
-            '<p class="netnote">No codes to type. Host makes your duel visible nearby, join finds it automatically via Bluetooth.</p>'+
-            '<div class="stack" style="margin-top:12px">'+
-              '<button class="btn btn-primary play" id="btnHostNearbyBT">'+ICON.swords+'<span>HOST NEARBY DUEL</span></button>'+
-              '<button class="btn btn-net" id="btnJoinNearbyBT" style="margin-top:8px">'+ICON.orbs+'<span>JOIN NEARBY DUEL</span></button>'+
-            '</div>'+
-            '<p class="netnote" style="margin-top:10px">Both devices need Bluetooth and need to be within ~30ft.</p>'+
-          '</div>'+
++
           '<p class="foot" style="margin-top:12px">KEYBOARD: ARROWS &middot; SPACE &middot; ENTER &middot; S &middot; P &middot; M</p>'+
         '</div>'+
       '</div>'+
@@ -1284,6 +1309,12 @@ function renderHome(){
       Snd.play("select"); renderHome();
     });
   });
+  Array.prototype.forEach.call(document.querySelectorAll(".raceopt"), function(b){
+    b.addEventListener("click", function(){
+      S.raceInterval=parseInt(b.getAttribute("data-race"),10); store("wco_race", String(S.raceInterval));
+      Snd.play("select"); renderHome();
+    });
+  });
 
   Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(b){
     b.addEventListener("click", function(){
@@ -1294,15 +1325,28 @@ function renderHome(){
       });
       $("#panelSolo").classList.toggle("hidden", S.uiMode!=="solo");
       $("#panelNet").classList.toggle("hidden", S.uiMode!=="net");
-      var pn=$("#panelNearby"); if(pn) pn.classList.toggle("hidden", S.uiMode!=="nearby");
       if(S.uiMode==="net") setTimeout(function(){ var c=$("#codeInput"); if(c) c.focus(); },50);
     });
   });
 
   var bh=$("#btnHost"); if(bh) bh.addEventListener("click", netHost);
+  var bp=$("#btnPractice"); if(bp) bp.addEventListener("click", startPractice);
+  var br=$("#btnRace"); if(br){
+    br.addEventListener("click", function(){ StormPreview.stop(); startRaceStorm(S.raceInterval); });
+    br.addEventListener("mouseenter", function(){ if(S.screen==="home") StormPreview.start(); });
+    br.addEventListener("mouseleave", function(){ StormPreview.stop(); });
+    br.addEventListener("focus", function(){ if(S.screen==="home") StormPreview.start(); });
+    br.addEventListener("blur", function(){ StormPreview.stop(); });
+  }
+  // race interval buttons also trigger storm preview
+  Array.prototype.forEach.call(document.querySelectorAll(".raceopt"), function(rb){
+    rb.addEventListener("mouseenter", function(){ if(S.screen==="home") StormPreview.start(); });
+    rb.addEventListener("mouseleave", function(){ StormPreview.stop(); });
+    rb.addEventListener("focus", function(){ if(S.screen==="home") StormPreview.start(); });
+    rb.addEventListener("blur", function(){ StormPreview.stop(); });
+    rb.addEventListener("click", function(){ setTimeout(function(){ StormPreview.stop(); }, 200); });
+  });
   var bj=$("#btnJoin"); if(bj) bj.addEventListener("click", function(){ netJoin(($("#codeInput")||{}).value); });
-  var bhn=$("#btnHostNearbyBT"); if(bhn) bhn.addEventListener("click", hostNearbyStrict);
-  var bjn=$("#btnJoinNearbyBT"); if(bjn) bjn.addEventListener("click", joinNearbyStrict);
   var ci=$("#codeInput");
   if(ci){
     ci.addEventListener("input", function(){
@@ -1320,10 +1364,6 @@ function homePrimary(){
     var ci=$("#codeInput");
     var v=ci?ci.value.replace(/[^A-Za-z0-9]/g,""):"";
     if(v.length===4) netJoin(v); else netHost();
-    return;
-  }
-  if(S.uiMode==="nearby"){
-    hostNearbyStrict();
     return;
   }
   startMatch();
@@ -1356,6 +1396,54 @@ function startMatch(){
   startRound();
 }
 
+function startPractice(){
+  Snd.unlock();
+  S.meName = (S.meName||"YOU").trim() || "YOU";
+  store("wco_name", S.meName);
+  S.mode="practice"; S.isHost=false;
+  netHeartbeatStop(); Net.cleanup();
+  S.round=1; S.wins={me:0,cpu:0}; S.lastPuzzleIdx=-1;
+  S.cpuName="PRACTICE";
+  S.raceDeadline=0;
+  startRoundPractice();
+}
+
+function startRaceStorm(interval){
+  Snd.unlock();
+  S.meName = (S.meName||"YOU").trim() || "YOU";
+  store("wco_name", S.meName);
+  if(interval){ S.raceInterval=interval; store("wco_race", String(interval)); }
+  S.mode="race"; S.isHost=false;
+  netHeartbeatStop(); Net.cleanup();
+  S.round=1; S.wins={me:0,cpu:0}; S.lastPuzzleIdx=-1;
+  S.cpuName="STORM";
+  S.raceDeadline=0;
+  startRoundRace();
+}
+
+function startRoundPractice(){
+  var idx;
+  do { idx=Math.floor(Math.random()*PUZZLES.length); } while(idx===S.lastPuzzleIdx && PUZZLES.length>1);
+  setupBoard(idx, null);
+  S.cpuTimes=[]; S.cpuDone=0;
+  S.startedAt=performance.now()+2000; S.counting=true; S.running=false;
+  renderArena(true);
+  showCountdown();
+  startTick();
+}
+
+function startRoundRace(){
+  var idx;
+  do { idx=Math.floor(Math.random()*PUZZLES.length); } while(idx===S.lastPuzzleIdx && PUZZLES.length>1);
+  setupBoard(idx, null);
+  S.cpuTimes=[]; S.cpuDone=0;
+  S.startedAt=performance.now()+2000; S.counting=true; S.running=false;
+  S.raceDeadline=0;
+  renderArena(true);
+  showCountdown();
+  startTick();
+}
+
 // Shared per-round reset. Both solo and online paths funnel through here so the
 // board is built exactly the same way; only the ordering source differs
 // (Math.random for solo, a shared seed for online).
@@ -1384,6 +1472,7 @@ function startRound(){
 
 /* ------------------------------- ARENA ------------------------------- */
 function renderArena(enter){
+  try{ StormPreview.stop(); }catch(e){}
   S.screen="arena";
   hideOverlays();
   $("#stage").innerHTML =
@@ -1555,6 +1644,9 @@ function submitGuess(){
     S.selected=[];
     Snd.play("correct"+cat);
     Shake.kick(5);
+    if(S.mode==="race"){
+      S.raceDeadline=performance.now()+S.raceInterval;
+    }
     var done = S.solved.length===4;
     if(done){
       S.finishedMs=Math.max(1,Math.floor(elapsed()));
@@ -1619,6 +1711,48 @@ function cpuTick(){
   }
 }
 
+function clearAutoExit(){
+  if(S.net.autoExitId){ clearTimeout(S.net.autoExitId); S.net.autoExitId=0; }
+  if(S.net.autoExitInt){ clearInterval(S.net.autoExitInt); S.net.autoExitInt=0; }
+}
+function startAutoExitCountdown(){
+  clearAutoExit();
+  if(S.mode!=="net") return;
+  S.net.autoExitRem=30;
+  var hintEl = function(){ return document.getElementById("rematchHint"); };
+  var updateHint = function(){
+    var h=hintEl();
+    if(!h) return;
+    if(S.net.rematch||S.net.oppRematch){
+      // don't overwrite rematch waiting text, but still show timer
+      if(h.textContent.indexOf("AUTO-EXIT")<0){
+        h.textContent = h.textContent + " · AUTO-EXIT IN " + S.net.autoExitRem + "s";
+      } else {
+        h.textContent = h.textContent.replace(/AUTO-EXIT IN \d+s/, "AUTO-EXIT IN "+S.net.autoExitRem+"s");
+      }
+      return;
+    }
+    h.textContent = "BOTH PLAYERS MUST AGREE · AUTO-EXIT IN " + S.net.autoExitRem + "s";
+  };
+  updateHint();
+  S.net.autoExitInt = setInterval(function(){
+    S.net.autoExitRem--;
+    if(S.net.autoExitRem<=0){
+      clearAutoExit();
+      return;
+    }
+    updateHint();
+  },1000);
+  S.net.autoExitId = setTimeout(function(){
+    clearAutoExit();
+    if(S.mode==="net" && S.over){
+      toast("Duel ended — returning to menu","info");
+      netExit();
+      renderHome();
+    }
+  },30000);
+}
+
 /* ------------------------------ FINISH ------------------------------- */
 function finishRound(kind, atMs){
   if(S.over) return;
@@ -1626,19 +1760,31 @@ function finishRound(kind, atMs){
   var myMs = S.finishedMs;
   var win = kind==="win"||kind==="walkover";
   var draw = kind==="draw";
+  var storm = kind==="storm";
   var oppMs = S.mode==="net" ? S.net.oppProg.finishedMs : null;
   if(win){ S.wins.me++; Snd.play("win"); FX.win(); Shake.kick(9); }
   else if(draw){ Snd.play("lose"); FX.lose(); Shake.kick(6); }
+  else if(storm){ S.wins.cpu++; Snd.play("bust"); FX.storm(); Shake.kick(18); }
   else { S.wins.cpu++; Snd.play("lose"); FX.lose(); Shake.kick(kind==="bust"?14:7); }
   recordMatch(draw?"D":(win?"W":"L"), S.cpuName, win?myMs:null, S.mistakes);
 
   var headline, sub, cls;
   if(kind==="walkover"){ headline="WALKOVER WIN"; cls="grad-win";
     sub=S.cpuName+" disconnected — the round is yours."; }
-  else if(win){ headline="YOU WIN"; cls="grad-win";
-    sub = (S.mode==="net"&&oppMs!=null)
-      ? "Photo finish: you "+fmt(myMs)+" vs "+S.cpuName+" "+fmt(oppMs)+"."
-      : "All four themes connected in "+fmt(myMs)+" — "+S.cpuName+" only had "+S.cpuDone+"."; }
+  else if(storm){ headline="STORM TOOK YOU"; cls="txt-lose";
+    sub="The storm caught you - you ran out of time! Race the storm again?"; }
+  else if(win){
+    if(S.mode==="practice"){ headline="PUZZLE SOLVED"; cls="grad-win";
+      sub="All four themes connected in "+fmt(myMs)+" — next puzzle?"; }
+    else if(S.mode==="race"){ headline="STORM BEATEN"; cls="grad-win";
+      sub="You beat the storm in "+fmt(myMs)+"! Race again?"; }
+    else {
+      headline="YOU WIN"; cls="grad-win";
+      sub = (S.mode==="net"&&oppMs!=null)
+        ? "Photo finish: you "+fmt(myMs)+" vs "+S.cpuName+" "+fmt(oppMs)+"."
+        : "All four themes connected in "+fmt(myMs)+" — "+S.cpuName+" only had "+S.cpuDone+".";
+    }
+  }
   else if(draw){ headline="DEAD HEAT"; cls="txt-draw";
     sub="Both of you busted. Nobody scores — run it back."; }
   else if(kind==="bust"||S.busted){ headline="BUSTED"; cls="txt-lose";
@@ -1654,6 +1800,8 @@ function finishRound(kind, atMs){
   S.solved=S.solved.concat(reveal);
   S.order=[];
   renderGrid(false,false); updateHud();
+  var isPractice = S.mode==="practice";
+  var isRace = S.mode==="race";
 
   var html=
     '<div class="ov"><div class="ov-card glass">'+
@@ -1671,7 +1819,7 @@ function finishRound(kind, atMs){
         '<div style="text-align:left"><div class="nm">'+esc(S.cpuName)+'</div><div class="sc s">'+S.wins.cpu+'</div></div>'+
       '</div>'+
       '<div class="ov-actions">'+
-        '<button class="btn '+(draw?"btn-ghost":"btn-primary")+'" id="btnRematch"><span>'+(isPractice?"NEXT PUZZLE":"REMATCH")+'</span></button>'+
+        '<button class="btn '+(draw?"btn-ghost":"btn-primary")+'" id="btnRematch"><span>'+(isPractice?"NEXT PUZZLE":(isRace?"RACE AGAIN":"REMATCH"))+'</span></button>'+
         '<button class="btn btn-ghost" id="btnMenu"><span>EXIT</span></button>'+
       '</div>'+
       '<p class="hint" id="rematchHint">'+(S.mode==="net"
@@ -1683,10 +1831,17 @@ function finishRound(kind, atMs){
     $("#btnRematch").addEventListener("click", rematch);
     $("#btnMenu").addEventListener("click", function(){
       Snd.play("deselect");
-      if(S.mode==="net") netExit();
-      renderHome();
+      if(S.mode==="net"){
+        netExit();
+        renderHome();
+      } else {
+        renderHome();
+      }
     });
     paintRematch();
+    if(S.mode==="net"){
+      startAutoExitCountdown();
+    }
   }, win?900:700);
 }
 
@@ -1698,7 +1853,7 @@ function rematch(){
     S.net.rematch=true; Snd.play("select");
     Net.send({t:"rematch"});
     paintRematch();
-    if(S.isHost&&S.net.oppRematch){ hideOverlays(); S.round++; netBeginRound(); }
+    if(S.isHost&&S.net.oppRematch){ clearAutoExit(); hideOverlays(); S.round++; netBeginRound(); }
     return;
   }
   hideOverlays();
@@ -1713,19 +1868,20 @@ function paintRematch(){
   if(!b||S.mode!=="net") return;
   if(S.net.gone){
     b.disabled=true; b.innerHTML="<span>RIVAL LEFT</span>";
-    if(h) h.textContent="SCORES ARE FROZEN — HOST A NEW DUEL";
+    if(h) h.textContent="SCORES ARE FROZEN — RETURNING TO MENU…";
     return;
   }
+  var rem = S.net.autoExitRem||30;
   if(S.net.rematch){
     b.innerHTML='<span style="display:inline-flex;align-items:center;gap:8px"><span class="spin"></span>WAITING FOR '+esc(S.cpuName)+'…</span>';
     b.classList.remove("pulse");
-    if(h) h.textContent="WAITING FOR "+S.cpuName.toUpperCase()+" TO AGREE…";
+    if(h) h.textContent="WAITING FOR "+S.cpuName.toUpperCase()+" TO AGREE… · AUTO-EXIT IN "+rem+"s";
   } else if(S.net.oppRematch){
     b.innerHTML='<span style="display:inline-flex;align-items:center;gap:8px">'+ICON.repeat+"ACCEPT REMATCH</span>";
     b.classList.add("btn-primary","pulse");
-    if(h) h.textContent=S.cpuName.toUpperCase()+" WANTS A REMATCH";
+    if(h) h.textContent=S.cpuName.toUpperCase()+" WANTS A REMATCH · AUTO-EXIT IN "+rem+"s";
   } else if(h){
-    h.textContent="BOTH PLAYERS MUST AGREE · ENTER OR R";
+    h.textContent="BOTH PLAYERS MUST AGREE · AUTO-EXIT IN "+rem+"s";
   }
 }
 
@@ -1746,7 +1902,9 @@ function updateCountdown(){
   var ov=$("#cdOv");
   if(rem<=0){
     if(ov){ hideOverlays(); Snd.play("go"); }
-    S.counting=false; S.running=true; updateSubmit();
+    S.counting=false; S.running=true; 
+    if(S.mode==="race"){ S.raceDeadline=performance.now()+S.raceInterval; }
+    updateSubmit();
     return;
   }
   var n=Math.max(1,Math.min(3,Math.ceil(rem/1000)));
@@ -1809,6 +1967,25 @@ function startTick(){
       if(S.net.verifyUntil) netCheckVerify();
       return;
     }
+    if(S.mode==="race"){
+      if(!S.paused && S.raceDeadline){
+        var remain = S.raceDeadline - performance.now();
+        var rc=$("#raceClock");
+        if(rc){
+          var pct = Math.max(0, Math.min(100, (remain / S.raceInterval)*100));
+          rc.innerHTML='<span>'+(remain>0? (remain/1000).toFixed(1)+'s' : '0.0s')+'</span><span class="bar"><span class="bar-fill" style="width:'+pct+'%"></span></span>';
+          rc.className="race-clock"+(remain<5000?" warn":"");
+        }
+        var rsc=$("#raceStrikesClock");
+        if(rsc){ rsc.textContent= remain>0? (remain/1000).toFixed(1)+'s' : '0.0s'; }
+        if(remain<=0){
+          finishRound("storm", null);
+          return;
+        }
+      }
+      return;
+    }
+    if(S.mode==="practice") return;
     if(!S.paused) cpuTick();
   },90);
 }
@@ -1871,9 +2048,8 @@ renderHome();
 
 
 
-<script src="nearby-bridge.js"></script>
 <script>
-/* Nearby boot: ?cc_host=1&cc_advertise=1 | ?cc_join=CODE */
+/* Online boot: ?cc_join=CODE */
 (function () {
   function qp() {
     try { return new URLSearchParams(location.search); } catch (e) {
@@ -1888,31 +2064,11 @@ renderHome();
   }
   var q = qp();
   var join = q.get('cc_join');
-  var host = q.get('cc_host');
-  var advertise = q.get('cc_advertise') === '1';
-  if (!join && !host) return;
-
+  if (!join) return;
   waitFor(function () {
-    return typeof netHost === 'function' && typeof netJoin === 'function';
+    return typeof netJoin === 'function';
   }, function () {
-    try {
-      if (host) {
-        netHost();
-        if (advertise) {
-          waitFor(function () { return typeof S !== 'undefined' && S.roomCode && String(S.roomCode).length === 4; }, function () {
-            var code = String(S.roomCode).toUpperCase();
-            if (window.CCNearby && CCNearby.init) {
-              CCNearby.init().then(function () {
-                if (!CCNearby.bleAvailable) return;
-                return CCNearby.advertiseCode(code);
-              }).catch(function () {});
-            }
-          }, 200);
-        }
-      } else if (join) {
-        netJoin(join);
-      }
-    } catch (e) {}
+    try { netJoin(join); } catch (e) {}
   });
 })();
 </script>
