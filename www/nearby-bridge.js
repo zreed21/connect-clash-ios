@@ -1,19 +1,6 @@
 /**
  * Pairstorm — Nearby discovery bridge (Capacitor / iOS)
- *
- * Strategy (bandwidth honesty):
- *   Classic BLE cannot sustain twitch arena sync. This bridge only helps
- *   discover / exchange the existing 4-character duel code. Gameplay always
- *   stays on PeerJS WebRTC data channels (same as the itch build).
- *
- * Plugin reality (@capacitor-community/bluetooth-le@7):
- *   CENTRAL ROLE ONLY — can scan/connect; cannot advertise as a peripheral.
- *   Therefore "Host Nearby → advertise CC-XXXX" is a STUB on stock BLE-LE.
- *   Join Nearby can scan if some peripheral advertises that name/service;
- *   otherwise the joiner enters the on-screen code (WebRTC still works).
- *
- * Service UUID reserved for a future peripheral / Multipeer plugin:
- *   c0c1a501-c1a5-4000-8000-636f6e6e6563
+ * Production - no debug logging
  */
 (function (global) {
   'use strict';
@@ -31,11 +18,7 @@
     _Ble: null,
   };
 
-  function log() {
-    try {
-      console.log.apply(console, ['[CC-Nearby]'].concat([].slice.call(arguments)));
-    } catch (e) {}
-  }
+  function log() {}
 
   function detectNative() {
     try {
@@ -62,28 +45,19 @@
     var Ble = getBle();
     if (!api.isNative || !Ble) {
       api.bleAvailable = false;
-      log('Web / no BLE plugin — scan/advertise disabled; WebRTC online still works.');
       return api;
     }
     try {
       await Ble.initialize({ androidNeverForLocation: true });
       api.bleAvailable = true;
-      // Stock plugin has no startAdvertising — peripheral requires another plugin / native stub.
       api.canAdvertise = typeof Ble.startAdvertising === 'function';
-      log('BLE central initialized; canAdvertise=', api.canAdvertise);
     } catch (e) {
       api.lastError = String(e && e.message ? e.message : e);
       api.bleAvailable = false;
-      log('BLE init failed', api.lastError);
     }
     return api;
   }
 
-  /**
-   * Host advertise stub.
-   * Persists the code for UI / future Multipeer native plugin
-   * (see ios/App/App/CCNearbyNativeStub.md).
-   */
   async function advertiseCode(code) {
     var c = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
     if (c.length !== 4) throw new Error('Need 4-char duel code');
@@ -97,25 +71,19 @@
     if (Ble && typeof Ble.startAdvertising === 'function') {
       await Ble.startAdvertising({ services: [SERVICE_UUID], name: PREFIX + c });
       api.lastError = null;
-      log('Advertising', PREFIX + c);
       return c;
     }
 
-    // Notify optional native stub (Multipeer / CBPeripheralManager) if registered.
     try {
       if (global.Capacitor && global.Capacitor.Plugins && global.Capacitor.Plugins.CCNearbyNative) {
         await global.Capacitor.Plugins.CCNearbyNative.advertise({ code: c, serviceUuid: SERVICE_UUID });
         api.canAdvertise = true;
         api.lastError = null;
-        log('Native stub advertising', c);
         return c;
       }
-    } catch (e) {
-      log('Native advertise stub error', e);
-    }
+    } catch (e) {}
 
     api.lastError = 'advertise-unsupported';
-    log('Peripheral advertise not available — show lobby code; rival types it or uses Join with code.');
     return c;
   }
 
@@ -123,9 +91,7 @@
     var Ble = getBle();
     try {
       if (Ble && typeof Ble.stopAdvertising === 'function') await Ble.stopAdvertising();
-    } catch (e) {
-      log('stopAdvertising', e);
-    }
+    } catch (e) {}
     try {
       if (global.Capacitor && global.Capacitor.Plugins && global.Capacitor.Plugins.CCNearbyNative) {
         await global.Capacitor.Plugins.CCNearbyNative.stopAdvertise();
@@ -133,19 +99,14 @@
     } catch (e) {}
   }
 
-  /**
-   * Join: scan for CC-XXXX (central role). Works when a peripheral advertises
-   * that local name / service — otherwise times out and UI falls back to manual code.
-   */
   async function scanForCode(timeoutMs) {
     var Ble = getBle();
-    if (!Ble) throw new Error('BLE unavailable');
+    if (!Ble) throw new Error('Nearby unavailable');
     api.mode = 'join';
     var found = null;
     var timeout = timeoutMs || 15000;
 
     await Ble.requestLEScan({
-      // Empty services = broader scan; filter in JS on CC- prefix
       allowDuplicates: false,
     });
 
@@ -158,7 +119,6 @@
           var m = String(name).match(/CC-([A-Z0-9]{4})/i);
           if (m && !found) {
             found = m[1].toUpperCase();
-            log('Found nearby host', found);
           }
         } catch (e) {}
       });
@@ -178,7 +138,7 @@
       } catch (e) {}
     }
 
-    if (!found) throw new Error('No nearby host found (BLE central scan). Enter the code instead.');
+    if (!found) throw new Error('No nearby duel found');
     try {
       localStorage.setItem('cc_nearby_code', found);
       localStorage.setItem('cc_nearby_role', 'join');
@@ -195,7 +155,6 @@
     }
     if (opts.join) q.push('cc_join=' + encodeURIComponent(String(opts.join).toUpperCase()));
     var url = 'game.html' + (q.length ? '?' + q.join('&') : '');
-    log('Launch', url);
     global.location.href = url;
   }
 
