@@ -31,7 +31,6 @@
     }
     button.secondary { background: rgba(255,255,255,.08); color: var(--cream); border: 1px solid rgba(255,255,255,.14); }
     button:disabled { opacity: .45; cursor: not-allowed; }
-    .hint { margin-top: 1.25rem; font-size: .8rem; color: rgba(247,242,255,.55); text-align: center; max-width: 26rem; line-height: 1.4; }
     .status { min-height: 1.25rem; margin-top: .75rem; font-size: .85rem; color: var(--sky); text-align: center; }
     .panel { display: none; margin-top: 1rem; width: min(100%, 22rem); padding: 1rem; border-radius: 14px;
       background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); }
@@ -43,47 +42,41 @@
       background: rgba(0,0,0,.35); color: #fff; font-size: 1.1rem; letter-spacing: .2em; text-align: center;
       text-transform: uppercase; margin-bottom: .75rem;
     }
-    .badge { display: inline-block; font-size: .7rem; letter-spacing: .08em; text-transform: uppercase;
-      padding: .2rem .5rem; border-radius: 999px; background: rgba(167,139,250,.2); color: var(--violet); margin-bottom: .75rem; }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="badge" id="envBadge">WEB</div>
     <h1>PAIRSTORM</h1>
-    <p class="sub">Same itch.io duel — PeerJS WebRTC online. Nearby on iOS uses BLE scan + code handoff (gameplay stays on WebRTC; BLE is not the game transport).</p>
+    <p class="sub">Fast word duels. Play solo or challenge a friend nearby.</p>
     <div class="stack">
-      <button type="button" id="btnPlay">Play (Online / Local)</button>
-      <button type="button" class="secondary" id="btnNearby" disabled>Nearby Duel (Bluetooth)</button>
+      <button type="button" id="btnPlay">Play</button>
+      <button type="button" class="secondary" id="btnNearby">Nearby Duel</button>
     </div>
     <div class="status" id="status"></div>
 
     <div class="panel" id="nearbyPanel">
-      <p class="sub" style="margin:0 0 .75rem">Nearby uses Bluetooth only to share the 4-character duel code. The match still runs over WebRTC (PeerJS).</p>
+      <p class="sub" style="margin:0 0 .75rem">Find friends around you and start a duel instantly.</p>
       <div class="stack">
-        <button type="button" id="btnHostNear">Host Nearby</button>
-        <button type="button" class="secondary" id="btnJoinNear">Join Nearby (Scan)</button>
+        <button type="button" id="btnHostNear">Host Nearby Duel</button>
+        <button type="button" class="secondary" id="btnJoinNear">Join Nearby Duel</button>
         <button type="button" class="secondary" id="btnJoinManual">Join with Code</button>
       </div>
       <div class="panel" id="hostPanel" style="margin-top:.75rem">
         <div>Your duel code</div>
         <div class="code" id="hostCode">····</div>
-        <button type="button" id="btnStartHost">Start Hosting Match</button>
+        <button type="button" id="btnStartHost">Start Duel</button>
       </div>
       <div class="panel" id="joinPanel" style="margin-top:.75rem">
         <input id="joinCode" maxlength="4" placeholder="CODE" autocomplete="off" autocapitalize="characters" />
-        <button type="button" id="btnConfirmJoin">Join Match</button>
+        <button type="button" id="btnConfirmJoin">Join Duel</button>
       </div>
     </div>
-
-    <p class="hint">Camera/Mic permission prompts on iOS are normal for WebRTC. Local Network may be requested for peer discovery. Online duels use the public PeerJS broker (HTTPS/WSS).</p>
   </div>
 
   <script src="nearby-bridge.js"></script>
   <script>
     (function () {
       var statusEl = document.getElementById('status');
-      var badge = document.getElementById('envBadge');
       function setStatus(t) { statusEl.textContent = t || ''; }
 
       function mkCode() {
@@ -105,8 +98,7 @@
         document.getElementById('hostPanel').classList.add('show');
         document.getElementById('joinPanel').classList.remove('show');
         document.getElementById('hostCode').textContent = 'AUTO';
-        setStatus('Starting host — game will mint a code and advertise it over Bluetooth when possible.');
-        // Game mints PeerJS code; boot script advertises that exact code.
+        setStatus('Starting nearby duel…');
         location.href = 'game.html?cc_host=1&cc_advertise=1';
       };
 
@@ -117,41 +109,38 @@
       document.getElementById('btnJoinNear').onclick = async function () {
         document.getElementById('joinPanel').classList.add('show');
         document.getElementById('hostPanel').classList.remove('show');
-        setStatus('Scanning for Nearby hosts…');
+        setStatus('Looking for nearby duels…');
         try {
-          if (!window.CCNearby || !CCNearby.bleAvailable) throw new Error('BLE unavailable');
+          if (!window.CCNearby || !CCNearby.bleAvailable) throw new Error('Nearby not available');
           var code = await CCNearby.scanForCode(15000);
           document.getElementById('joinCode').value = code;
-          setStatus('Found ' + code + ' — joining…');
+          setStatus('Found a duel — joining…');
           CCNearby.launchGame({ join: code });
         } catch (e) {
-          setStatus((e && e.message ? e.message : e) + ' — enter the code manually.');
+          setStatus('No nearby duels found. Enter a code to join.');
         }
       };
 
       document.getElementById('btnJoinManual').onclick = function () {
         document.getElementById('joinPanel').classList.add('show');
         document.getElementById('hostPanel').classList.remove('show');
-        setStatus('Enter the 4-character duel code.');
+        setStatus('Enter the 4-character code from your friend.');
       };
 
       document.getElementById('btnConfirmJoin').onclick = function () {
         var c = (document.getElementById('joinCode').value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
-        if (c.length !== 4) { setStatus('Need a 4-character code.'); return; }
+        if (c.length !== 4) { setStatus('Enter a valid 4-character code.'); return; }
         CCNearby.launchGame({ join: c });
       };
 
       (async function boot() {
         await CCNearby.init();
         if (CCNearby.isNative) {
-          badge.textContent = 'iOS NATIVE';
           document.getElementById('btnNearby').disabled = false;
-          setStatus(CCNearby.bleAvailable ? 'BLE central ready (scan). Host advertise needs Multipeer stub — codes still work via WebRTC.' : 'Native/web — Online WebRTC works; BLE optional.');
+          setStatus('');
         } else {
-          badge.textContent = 'BROWSER PREVIEW';
-          // Allow exercising UI in desktop preview
           document.getElementById('btnNearby').disabled = false;
-          setStatus('Browser preview — Nearby UI works; BLE only on device.');
+          setStatus('');
         }
       })();
     })();
