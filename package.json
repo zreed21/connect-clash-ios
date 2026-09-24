@@ -1,6 +1,6 @@
 {
   "name": "connect-clash-ios",
-  "version": "1.0.0",
+  "version": "1.3.0",
   "description": "Pairstorm \u2014 Capacitor iOS / TestFlight wrap (itch WebRTC + Nearby BLE discovery)",
   "main": "index.js",
   "scripts": {
