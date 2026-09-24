@@ -72,11 +72,11 @@
     padding:13px 20px;font-size:13px}
   .btn-ghost:hover{background:rgba(255,255,255,.1)}
   .btn:disabled{opacity:.45;cursor:default;transform:none}
-  .iconbtn{width:30px;height:30px;border-radius:9999px;display:flex;align-items:center;justify-content:center;
+  .iconbtn{width:28px;height:28px;border-radius:9999px;display:flex;align-items:center;justify-content:center;
     background:linear-gradient(160deg,rgba(255,255,255,.1),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.14);
     color:rgba(255,255,255,.7);cursor:pointer;transition:color .15s}
   .iconbtn:hover{color:#fff}
-  .iconbtn svg{width:15px;height:15px}
+  .iconbtn svg{width:14px;height:14px}
   .eyebrow{font-size:10px;font-weight:800;letter-spacing:.4em;color:var(--amber)}
 
   /* ---------- HOME ---------- */
@@ -208,7 +208,7 @@
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
   .ov-card{width:100%;max-width:420px;border-radius:28px;padding:26px 22px;text-align:center;animation:cardIn .38s cubic-bezier(.22,1,.36,1)}
   @keyframes cardIn{from{opacity:0;transform:scale(.86) translateY(24px)}to{opacity:1;transform:none}}
-  .ov-card svg.big{width:36px;height:36px;margin:0 auto}
+  .ov-card svg.big{width:28px;height:28px;margin:0 auto}
   .ov-card h2{font-family:var(--disp);font-size:clamp(28px,8vw,42px);letter-spacing:-.01em;margin-top:12px;line-height:1}
   .ov-card p.sub{margin-top:9px;font-size:12px;color:rgba(255,255,255,.58);line-height:1.5}
   .stats{margin-top:18px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -229,7 +229,7 @@
   .count-sub{margin-top:14px;font-size:10px;font-weight:800;letter-spacing:.3em;color:rgba(255,255,255,.42)}
   .count-top{margin-bottom:14px;font-size:10px;font-weight:800;letter-spacing:.34em;color:rgba(255,255,255,.5)}
   /* mode tabs + online duel bits */
-  .tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:14px;padding:4px;border-radius:16px;
+  .tabs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:14px;padding:4px;border-radius:16px;
     border:1px solid rgba(255,255,255,.1);background:rgba(0,0,0,.25)}
   .tab{border:0;cursor:pointer;border-radius:12px;padding:10px 6px;background:transparent;color:rgba(255,255,255,.55);
     font-family:var(--disp);font-size:11px;font-weight:800;letter-spacing:.12em;transition:all .15s}
@@ -627,6 +627,98 @@ function netJoin(raw){
   netReset(); netHandlers(); showJoinLobby("calling"); Net.join(c);
 }
 
+function hostNearbyStrict(){
+  if(typeof Peer==="undefined"){ toast("Peer networking unavailable","danger"); return; }
+  Snd.unlock();
+  S.meName=(S.meName||"YOU").trim()||"YOU"; store("wco_name",S.meName);
+  S.mode="net"; S.isHost=true; S.clockOffset=0; S.cpuName="NEARBY RIVAL";
+  netReset(); S.matchSeed=Math.floor(Math.random()*1e9);
+  netHandlers();
+  // Generate code for underlying transport, but don't show code UI - strict Bluetooth
+  var tempCode = (function(){ var ALPHA="ABCDEFGHJKMNPQRSTUVWXYZ23456789"; var r=""; for(var i=0;i<4;i++) r+=ALPHA[Math.floor(Math.random()*ALPHA.length)]; return r; })();
+  S.roomCode = tempCode;
+  showBluetoothHostPopup(tempCode);
+  // Start Multipeer advertise via bridge
+  if(window.CCNearby){
+    CCNearby.init().then(function(){
+      return CCNearby.advertiseCode(tempCode);
+    }).catch(function(){});
+  }
+  Net.host();
+}
+
+function joinNearbyStrict(){
+  if(typeof Peer==="undefined"){ toast("Peer networking unavailable","danger"); return; }
+  Snd.unlock();
+  S.meName=(S.meName||"YOU").trim()||"YOU"; store("wco_name",S.meName);
+  showBluetoothJoinPopup();
+  // Strict Bluetooth browse
+  if(window.CCNearby){
+    CCNearby.init().then(function(){
+      if(CCNearby.browseForCode){
+        return CCNearby.browseForCode(20000);
+      } else {
+        return CCNearby.scanForCode(20000);
+      }
+    }).then(function(code){
+      if(code && code.length===4){
+        S.mode="net"; S.isHost=false; S.roomCode=code; S.clockOffset=0; S.cpuName="NEARBY HOST";
+        netReset(); netHandlers(); showJoinLobby("calling"); Net.join(code);
+      }
+    }).catch(function(e){
+      hideOverlays();
+      toast(e && e.message ? e.message : "No nearby duels found", "danger");
+      renderHome();
+    });
+  } else {
+    toast("Nearby unavailable on this device","danger");
+  }
+}
+
+function showBluetoothHostPopup(code){
+  S.screen="lobby"; stopTick();
+  showOverlay('<div class="ov"><div class="ov-card glass">'+
+    '<p class="eyebrow">NEARBY BLUETOOTH &middot; HOSTING</p>'+
+    '<h2 style="font-size:clamp(20px,5.5vw,28px)">LOOKING FOR PLAYERS</h2>'+
+    '<div style="margin:18px auto"><span class="spin" style="width:28px;height:28px;border-width:3px"></span></div>'+
+    '<p class="sub">Your duel is visible nearby via Bluetooth.<br>Keep this screen open - a nearby player can join instantly.</p>'+
+    '<div class="code-row" style="opacity:0.15"><div class="code-tile">'+code.split("").join('</div><div class="code-tile">')+'</div></div>'+
+    '<div class="ov-actions">'+
+      '<button class="btn btn-ghost" id="btnCancelBT"><span>CANCEL</span></button>'+
+    '</div>'+
+    '<p class="hint">HOST IS SEARCHING &middot; NO CODE NEEDED FOR NEARBY</p>'+
+  '</div></div>');
+  var cb=document.getElementById('btnCancelBT');
+  if(cb) cb.addEventListener('click', function(){ 
+    if(window.CCNearby) CCNearby.stopAdvertising();
+    Net.cleanup(); S.mode="cpu"; renderHome(); 
+  });
+}
+
+function showBluetoothJoinPopup(){
+  S.screen="lobby"; stopTick();
+  showOverlay('<div class="ov"><div class="ov-card glass">'+
+    '<p class="eyebrow">NEARBY BLUETOOTH &middot; SEARCHING</p>'+
+    '<h2 style="font-size:clamp(20px,5.5vw,28px)">FINDING DUELS</h2>'+
+    '<div style="margin:18px auto"><span class="spin" style="width:28px;height:28px;border-width:3px"></span></div>'+
+    '<p class="sub">Scanning for nearby duels over Bluetooth...<br>Make sure the host is nearby and hosting.</p>'+
+    '<div class="ov-actions">'+
+      '<button class="btn btn-ghost" id="btnCancelBT2"><span>CANCEL</span></button>'+
+    '</div>'+
+    '<p class="hint">SEARCHING NEARBY &middot; ~30FT RANGE</p>'+
+  '</div></div>');
+  var cb=document.getElementById('btnCancelBT2');
+  if(cb) cb.addEventListener('click', function(){ 
+    if(window.CCNearby){ 
+      if(CCNearby.stopBrowse) CCNearby.stopBrowse();
+      CCNearby.stopAdvertising();
+    }
+    Net.cleanup(); S.mode="cpu"; renderHome(); 
+  });
+}
+
+
+
 function onNetMsg(m){
   if(!m||!m.t||S.mode!=="net") return;
   S.net.lastHeard=Date.now();
@@ -912,22 +1004,32 @@ function renderHome(){
           '<div class="field-label">YOUR CALLSIGN</div>'+
           '<input class="name" id="nameInput" maxlength="12" value="'+esc(S.meName)+'" placeholder="YOU" />'+
           '<div class="tabs">'+
-            '<button class="tab'+(S.uiMode==="solo"?" on":"")+'" data-mode="solo">SOLO<small>VS CPU RIVAL</small></button>'+
-            '<button class="tab'+(S.uiMode==="net"?" on":"")+'" data-mode="net">ONLINE DUEL<small>2 PLAYERS</small></button>'+
+            '<button class="tab'+(S.uiMode==="solo"?" on":"")+'" data-mode="solo">SOLO<small>VS CPU</small></button>'+
+            '<button class="tab'+(S.uiMode==="net"?" on":"")+'" data-mode="net">ONLINE<small>CODE</small></button>'+
+            '<button class="tab'+(S.uiMode==="nearby"?" on":"")+'" data-mode="nearby">NEARBY<small>BLUETOOTH</small></button>'+
           '</div>'+
-          '<div id="panelSolo"'+(S.uiMode==="net"?' class="hidden"':'')+'>'+
+          '<div id="panelSolo"'+(S.uiMode!=="solo"?' class="hidden"':'')+'>'+
             '<div class="field-label" style="margin-top:16px">RIVAL DIFFICULTY</div>'+
             '<div class="diffs">'+diffBtns+'</div>'+
             '<button class="btn btn-primary play" id="btnPlay">'+ICON.swords+'<span>ENTER THE ARENA</span></button>'+
           '</div>'+
-          '<div id="panelNet"'+(S.uiMode==="net"?'':' class="hidden"')+'>'+
+          '<div id="panelNet"'+(S.uiMode!=="net"?' class="hidden"':'')+'>'+
             '<div class="field-label" style="margin-top:16px">RIVAL&rsquo;S DUEL CODE</div>'+
             '<div class="joinrow">'+
               '<input class="code" id="codeInput" maxlength="4" placeholder="CODE" autocomplete="off" spellcheck="false" />'+
               '<button class="btn btn-net" id="btnJoin"><span>JOIN</span></button>'+
             '</div>'+
             '<button class="btn btn-primary play" id="btnHost" style="margin-top:10px">'+ICON.swords+'<span>HOST A DUEL &amp; GET A CODE</span></button>'+
-            '<p class="netnote">Host a duel to get a 4-letter code. Share it with a friend — you’ll both get the same puzzle and countdown. First to connect all four groups wins. Needs internet.</p>'+
+            '<p class="netnote">Host to get a 4-letter code. Share it — same puzzle, same countdown. First to finish wins.</p>'+
+          '</div>'+
+          '<div id="panelNearby"'+(S.uiMode!=="nearby"?' class="hidden"':'')+'>'+
+            '<div class="field-label" style="margin-top:16px">NEARBY BLUETOOTH</div>'+
+            '<p class="netnote">No codes to type. Host makes your duel visible nearby, join finds it automatically via Bluetooth.</p>'+
+            '<div class="stack" style="margin-top:12px">'+
+              '<button class="btn btn-primary play" id="btnHostNearbyBT">'+ICON.swords+'<span>HOST NEARBY DUEL</span></button>'+
+              '<button class="btn btn-net" id="btnJoinNearbyBT" style="margin-top:8px">'+ICON.orbs+'<span>JOIN NEARBY DUEL</span></button>'+
+            '</div>'+
+            '<p class="netnote" style="margin-top:10px">Both devices need Bluetooth and need to be within ~30ft.</p>'+
           '</div>'+
           '<p class="foot" style="margin-top:12px">KEYBOARD: ARROWS &middot; SPACE &middot; ENTER &middot; S &middot; P &middot; M</p>'+
         '</div>'+
@@ -985,12 +1087,15 @@ function renderHome(){
       });
       $("#panelSolo").classList.toggle("hidden", S.uiMode!=="solo");
       $("#panelNet").classList.toggle("hidden", S.uiMode!=="net");
+      var pn=$("#panelNearby"); if(pn) pn.classList.toggle("hidden", S.uiMode!=="nearby");
       if(S.uiMode==="net") setTimeout(function(){ var c=$("#codeInput"); if(c) c.focus(); },50);
     });
   });
 
   var bh=$("#btnHost"); if(bh) bh.addEventListener("click", netHost);
   var bj=$("#btnJoin"); if(bj) bj.addEventListener("click", function(){ netJoin(($("#codeInput")||{}).value); });
+  var bhn=$("#btnHostNearbyBT"); if(bhn) bhn.addEventListener("click", hostNearbyStrict);
+  var bjn=$("#btnJoinNearbyBT"); if(bjn) bjn.addEventListener("click", joinNearbyStrict);
   var ci=$("#codeInput");
   if(ci){
     ci.addEventListener("input", function(){
@@ -1008,6 +1113,10 @@ function homePrimary(){
     var ci=$("#codeInput");
     var v=ci?ci.value.replace(/[^A-Za-z0-9]/g,""):"";
     if(v.length===4) netJoin(v); else netHost();
+    return;
+  }
+  if(S.uiMode==="nearby"){
+    hostNearbyStrict();
     return;
   }
   startMatch();

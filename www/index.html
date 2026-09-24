@@ -7,143 +7,71 @@
   <meta name="theme-color" content="#0a0614" />
   <title>Pairstorm</title>
   <style>
-    :root {
-      --ink: #0a0614; --cream: #f7f2ff; --amber: #fbbf24; --sky: #38bdf8; --violet: #a78bfa;
-      --safe-t: env(safe-area-inset-top, 0px);
-      --safe-b: env(safe-area-inset-bottom, 0px);
-    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; overflow: hidden; background: var(--ink); color: #fff;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-      -webkit-tap-highlight-color: transparent; user-select: none; }
-    .wrap {
-      min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
-      padding: calc(24px + var(--safe-t)) 24px calc(24px + var(--safe-b));
+    html, body { height: 100%; overflow: hidden; background: #0a0614; }
+    body {
+      font-family: "Arial Black", Impact, ui-sans-serif, system-ui, sans-serif;
+      display: flex; align-items: center; justify-content: center;
       background: radial-gradient(120% 90% at 50% 0%, #1d1136 0%, #0a0614 55%, #05030b 100%);
+      color: #fff;
     }
-    h1 { font-family: "Arial Black", Impact, system-ui, sans-serif; font-size: clamp(1.8rem, 7vw, 2.6rem);
-      letter-spacing: .04em; margin-bottom: .35rem; text-align: center; }
-    .sub { color: rgba(247,242,255,.7); text-align: center; max-width: 28rem; line-height: 1.45; margin-bottom: 1.75rem; font-size: .95rem; }
-    .stack { display: flex; flex-direction: column; gap: .75rem; width: min(100%, 22rem); }
-    button {
-      appearance: none; border: 0; border-radius: 14px; padding: 1rem 1.1rem; font-weight: 700;
-      font-size: 1rem; cursor: pointer; color: #1a1000; background: var(--amber);
+    .loader {
+      text-align: center;
+      animation: fadeIn 0.6s ease-out;
     }
-    button.secondary { background: rgba(255,255,255,.08); color: var(--cream); border: 1px solid rgba(255,255,255,.14); }
-    button:disabled { opacity: .45; cursor: not-allowed; }
-    .status { min-height: 1.25rem; margin-top: .75rem; font-size: .85rem; color: var(--sky); text-align: center; }
-    .panel { display: none; margin-top: 1rem; width: min(100%, 22rem); padding: 1rem; border-radius: 14px;
-      background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); }
-    .panel.show { display: block; }
-    .code { font-family: ui-monospace, Menlo, monospace; font-size: 2rem; letter-spacing: .35em; text-align: center;
-      color: var(--amber); margin: .5rem 0 1rem; }
-    input {
-      width: 100%; padding: .85rem; border-radius: 12px; border: 1px solid rgba(255,255,255,.18);
-      background: rgba(0,0,0,.35); color: #fff; font-size: 1.1rem; letter-spacing: .2em; text-align: center;
-      text-transform: uppercase; margin-bottom: .75rem;
+    .reed {
+      font-family: "Arial Black", Impact, sans-serif;
+      font-size: clamp(2rem, 10vw, 3.5rem);
+      letter-spacing: 0.18em;
+      font-weight: 900;
+      background: linear-gradient(95deg, #fbbf24, #fb923c 45%, #a78bfa);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: pulse 1.6s ease-in-out infinite;
     }
+    .gaming {
+      margin-top: 0.25rem;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: clamp(0.75rem, 3vw, 0.95rem);
+      letter-spacing: 0.45em;
+      color: rgba(255,255,255,0.5);
+      font-weight: 700;
+    }
+    .bar {
+      margin: 1.5rem auto 0;
+      width: 120px; height: 3px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      width: 0%; height: 100%;
+      background: linear-gradient(90deg, #fbbf24, #a78bfa);
+      animation: load 1.8s ease-in-out forwards;
+    }
+    @keyframes load { to { width: 100%; } }
+    @keyframes pulse { 0%,100% { opacity: 0.9; transform: scale(1); } 50% { opacity: 1; transform: scale(1.03); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    @keyframes fadeOut { to { opacity: 0; transform: scale(0.98); } }
+    .out { animation: fadeOut 0.5s ease forwards; }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>PAIRSTORM</h1>
-    <p class="sub">Fast word duels. Play solo or challenge a friend nearby.</p>
-    <div class="stack">
-      <button type="button" id="btnPlay">Play</button>
-      <button type="button" class="secondary" id="btnNearby">Nearby Duel</button>
-    </div>
-    <div class="status" id="status"></div>
-
-    <div class="panel" id="nearbyPanel">
-      <p class="sub" style="margin:0 0 .75rem">Find friends around you and start a duel instantly.</p>
-      <div class="stack">
-        <button type="button" id="btnHostNear">Host Nearby Duel</button>
-        <button type="button" class="secondary" id="btnJoinNear">Join Nearby Duel</button>
-        <button type="button" class="secondary" id="btnJoinManual">Join with Code</button>
-      </div>
-      <div class="panel" id="hostPanel" style="margin-top:.75rem">
-        <div>Your duel code</div>
-        <div class="code" id="hostCode">····</div>
-        <button type="button" id="btnStartHost">Start Duel</button>
-      </div>
-      <div class="panel" id="joinPanel" style="margin-top:.75rem">
-        <input id="joinCode" maxlength="4" placeholder="CODE" autocomplete="off" autocapitalize="characters" />
-        <button type="button" id="btnConfirmJoin">Join Duel</button>
-      </div>
-    </div>
+  <div class="loader" id="loader">
+    <div class="reed">REED</div>
+    <div class="reed" style="margin-top:-0.15em">GAMING</div>
+    <div class="gaming">PRESENTS</div>
+    <div class="bar"><div class="bar-fill"></div></div>
   </div>
-
-  <script src="nearby-bridge.js"></script>
   <script>
-    (function () {
-      var statusEl = document.getElementById('status');
-      function setStatus(t) { statusEl.textContent = t || ''; }
-
-      function mkCode() {
-        var ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-        var s = '';
-        for (var i = 0; i < 4; i++) s += ALPHA[Math.floor(Math.random() * ALPHA.length)];
-        return s;
-      }
-
-      document.getElementById('btnPlay').onclick = function () {
-        location.href = 'game.html';
-      };
-
-      document.getElementById('btnNearby').onclick = function () {
-        document.getElementById('nearbyPanel').classList.add('show');
-      };
-
-      document.getElementById('btnHostNear').onclick = function () {
-        document.getElementById('hostPanel').classList.add('show');
-        document.getElementById('joinPanel').classList.remove('show');
-        document.getElementById('hostCode').textContent = 'AUTO';
-        setStatus('Starting nearby duel…');
-        location.href = 'game.html?cc_host=1&cc_advertise=1';
-      };
-
-      document.getElementById('btnStartHost').onclick = function () {
-        location.href = 'game.html?cc_host=1&cc_advertise=1';
-      };
-
-      document.getElementById('btnJoinNear').onclick = async function () {
-        document.getElementById('joinPanel').classList.add('show');
-        document.getElementById('hostPanel').classList.remove('show');
-        setStatus('Looking for nearby duels…');
-        try {
-          if (!window.CCNearby || !CCNearby.bleAvailable) throw new Error('Nearby not available');
-          var code = await CCNearby.scanForCode(15000);
-          document.getElementById('joinCode').value = code;
-          setStatus('Found a duel — joining…');
-          CCNearby.launchGame({ join: code });
-        } catch (e) {
-          setStatus('No nearby duels found. Enter a code to join.');
-        }
-      };
-
-      document.getElementById('btnJoinManual').onclick = function () {
-        document.getElementById('joinPanel').classList.add('show');
-        document.getElementById('hostPanel').classList.remove('show');
-        setStatus('Enter the 4-character code from your friend.');
-      };
-
-      document.getElementById('btnConfirmJoin').onclick = function () {
-        var c = (document.getElementById('joinCode').value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
-        if (c.length !== 4) { setStatus('Enter a valid 4-character code.'); return; }
-        CCNearby.launchGame({ join: c });
-      };
-
-      (async function boot() {
-        await CCNearby.init();
-        if (CCNearby.isNative) {
-          document.getElementById('btnNearby').disabled = false;
-          setStatus('');
-        } else {
-          document.getElementById('btnNearby').disabled = false;
-          setStatus('');
-        }
-      })();
-    })();
+    setTimeout(function() {
+      var l = document.getElementById('loader');
+      if (l) l.classList.add('out');
+    }, 1500);
+    setTimeout(function() {
+      location.href = 'game.html';
+    }, 2000);
   </script>
 </body>
 </html>
