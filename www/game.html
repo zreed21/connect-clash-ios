@@ -566,8 +566,11 @@ function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 function shuffleArr(a){ var o=a.slice(); for(var i=o.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=o[i];o[i]=o[j];o[j]=t; } return o; }
 function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c];}); }
 function fmt(ms){
+  if(ms==null || isNaN(ms)) ms=0;
   var t=Math.max(0,Math.floor(ms||0));
+  if(isNaN(t)) t=0;
   var m=Math.floor(t/60000), s=Math.floor((t%60000)/1000), d=Math.floor((t%1000)/100);
+  if(isNaN(m)) m=0; if(isNaN(s)) s=0; if(isNaN(d)) d=0;
   return m+":"+String(s).padStart(2,"0")+"."+d;
 }
 function store(k,v){ try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v); }catch(e){ return null; } }
@@ -1173,7 +1176,7 @@ var S={
   diff: store("wco_diff") || "sharp",
   muted: store("wco_muted")==="1",
   uiMode: store("wco_mode") || "solo",
-  raceInterval: parseInt(store("wco_race")||"30000",10),
+  raceInterval: (function(){ var v=parseInt(store("wco_race")||"30000",10); return isNaN(v)?30000:v; })(),
   raceDeadline: 0,
   puzzle:null, puzzleIdx:-1, order:[], wordCat:{}, solved:[], selected:[],
   mistakes:0, guesses:[], busted:false, finishedMs:null,
@@ -1281,12 +1284,12 @@ function renderHome(){
             '<span class="pill">THIS DEVICE</span>'+
           '</div>'+
           '<div class="rec-grid">'+
-            '<div class="rec">'+ICON.trophy+'<b>'+r.wins+'</b><i>WINS</i></div>'+
-            '<div class="rec">'+ICON.medal+'<b>'+r.losses+'</b><i>LOSSES</i></div>'+
+            '<div class="rec">'+ICON.trophy+'<b>'+(isNaN(r.wins)?0:r.wins)+'</b><i>WINS</i></div>'+
+            '<div class="rec">'+ICON.medal+'<b>'+(isNaN(r.losses)?0:r.losses)+'</b><i>LOSSES</i></div>'+
             '<div class="rec">'+ICON.timer+'<b style="font-size:15px">'+fmt(r.bestMs)+'</b><i>BEST TIME</i></div>'+
-            '<div class="rec">'+ICON.crown+'<b style="font-size:15px">'+(r.bestMistakes==null?"&mdash;":r.bestMistakes+" miss")+'</b><i>CLEANEST</i></div>'+
-            '<div class="rec">'+ICON.flame+'<b>'+r.bestStreak+'</b><i>BEST STREAK</i></div>'+
-            '<div class="rec">'+ICON.hourglass+'<b>'+(r.wins+r.losses+(r.draws||0))+'</b><i>DUELS</i></div>'+
+            '<div class="rec">'+ICON.crown+'<b style="font-size:15px">'+(r.bestMistakes==null||isNaN(r.bestMistakes)?"&mdash;":r.bestMistakes+" miss")+'</b><i>CLEANEST</i></div>'+
+            '<div class="rec">'+ICON.flame+'<b>'+(isNaN(r.bestStreak)?0:r.bestStreak)+'</b><i>BEST STREAK</i></div>'+
+            '<div class="rec">'+ICON.hourglass+'<b>'+((isNaN(r.wins)?0:r.wins)+(isNaN(r.losses)?0:r.losses)+(isNaN(r.draws)?0:(r.draws||0)))+'</b><i>DUELS</i></div>'+
           '</div>'+recentHtml+
         '</div>'+
         '<p class="foot" style="margin-top:14px">PAIRSTORM &middot; SOLO & DUELS</p>'+
@@ -1572,9 +1575,9 @@ function updateHud(){
   if(cp) cp.innerHTML=pipsHtml(S.cpuDone,"on-sky");
   renderStrikes();
   var mw=$("#meWins"), cw=$("#cpuWins"), rn=$("#roundN");
-  if(mw) mw.textContent=S.wins.me;
-  if(cw) cw.textContent=S.wins.cpu;
-  if(rn) rn.textContent=S.round;
+  if(mw) mw.textContent=isNaN(S.wins.me)?0:S.wins.me;
+  if(cw) cw.textContent=isNaN(S.wins.cpu)?0:S.wins.cpu;
+  if(rn) rn.textContent=isNaN(S.round)?1:S.round;
 }
 function updateSubmit(){
   var b=$("#btnSubmit"), c=$("#selCount");
@@ -1723,16 +1726,16 @@ function startAutoExitCountdown(){
   var updateHint = function(){
     var h=hintEl();
     if(!h) return;
+    var rem = (isNaN(S.net.autoExitRem)?30:(S.net.autoExitRem||30));
     if(S.net.rematch||S.net.oppRematch){
-      // don't overwrite rematch waiting text, but still show timer
       if(h.textContent.indexOf("AUTO-EXIT")<0){
-        h.textContent = h.textContent + " · AUTO-EXIT IN " + S.net.autoExitRem + "s";
+        h.textContent = h.textContent + " · AUTO-EXIT IN " + rem + "s";
       } else {
-        h.textContent = h.textContent.replace(/AUTO-EXIT IN \d+s/, "AUTO-EXIT IN "+S.net.autoExitRem+"s");
+        h.textContent = h.textContent.replace(/AUTO-EXIT IN \d+s/, "AUTO-EXIT IN "+rem+"s");
       }
       return;
     }
-    h.textContent = "BOTH PLAYERS MUST AGREE · AUTO-EXIT IN " + S.net.autoExitRem + "s";
+    h.textContent = "BOTH PLAYERS MUST AGREE · AUTO-EXIT IN " + rem + "s";
   };
   updateHint();
   S.net.autoExitInt = setInterval(function(){
@@ -1871,7 +1874,7 @@ function paintRematch(){
     if(h) h.textContent="SCORES ARE FROZEN — RETURNING TO MENU…";
     return;
   }
-  var rem = S.net.autoExitRem||30;
+  var rem = (isNaN(S.net.autoExitRem)?30:(S.net.autoExitRem||30));
   if(S.net.rematch){
     b.innerHTML='<span style="display:inline-flex;align-items:center;gap:8px"><span class="spin"></span>WAITING FOR '+esc(S.cpuName)+'…</span>';
     b.classList.remove("pulse");
@@ -1968,16 +1971,19 @@ function startTick(){
       return;
     }
     if(S.mode==="race"){
-      if(!S.paused && S.raceDeadline){
+      if(!S.paused && S.raceDeadline && !isNaN(S.raceDeadline)){
         var remain = S.raceDeadline - performance.now();
+        if(isNaN(remain)) remain=0;
         var rc=$("#raceClock");
         if(rc){
-          var pct = Math.max(0, Math.min(100, (remain / S.raceInterval)*100));
-          rc.innerHTML='<span>'+(remain>0? (remain/1000).toFixed(1)+'s' : '0.0s')+'</span><span class="bar"><span class="bar-fill" style="width:'+pct+'%"></span></span>';
+          var iv = (isNaN(S.raceInterval)?30000:S.raceInterval)||30000;
+          var pct = Math.max(0, Math.min(100, (remain / iv)*100));
+          if(isNaN(pct)) pct=0;
+          rc.innerHTML='<span>'+(remain>0 && !isNaN(remain)? (remain/1000).toFixed(1)+'s' : '0.0s')+'</span><span class="bar"><span class="bar-fill" style="width:'+pct+'%"></span></span>';
           rc.className="race-clock"+(remain<5000?" warn":"");
         }
         var rsc=$("#raceStrikesClock");
-        if(rsc){ rsc.textContent= remain>0? (remain/1000).toFixed(1)+'s' : '0.0s'; }
+        if(rsc){ rsc.textContent= remain>0 && !isNaN(remain)? (remain/1000).toFixed(1)+'s' : '0.0s'; }
         if(remain<=0){
           finishRound("storm", null);
           return;
